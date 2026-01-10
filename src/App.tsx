@@ -16,6 +16,7 @@ import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import AdminDashboard from "./pages/AdminDashboard";
+import Ajuda from "./pages/Ajuda";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 
@@ -73,6 +74,7 @@ function AppRoutes() {
       <Route path="/estatisticas" element={<ProtectedRoute><Estatisticas /></ProtectedRoute>} />
       <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
       <Route path="/scripts" element={<ProtectedRoute><Scripts /></ProtectedRoute>} />
+      <Route path="/ajuda" element={<ProtectedRoute><Ajuda /></ProtectedRoute>} />
       <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
