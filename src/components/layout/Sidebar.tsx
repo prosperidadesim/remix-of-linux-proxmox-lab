@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { BookOpen, Brain, History, BarChart3, Settings, Menu, X, Database, Code2, Terminal, Shield, LogOut } from 'lucide-react';
+import { BookOpen, Brain, History, BarChart3, Settings, Menu, X, Database, Code2, Terminal, Shield, LogOut, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
@@ -15,6 +15,7 @@ const navItems = [
   { to: '/api-python', icon: Code2, label: 'API Python' },
   { to: '/estatisticas', icon: BarChart3, label: 'Estatísticas' },
   { to: '/configuracoes', icon: Settings, label: 'Configurações' },
+  { to: '/ajuda', icon: HelpCircle, label: 'Ajuda' },
 ];
 
 export function Sidebar() {
