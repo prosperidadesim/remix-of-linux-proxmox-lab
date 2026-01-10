@@ -149,13 +149,18 @@ export default function AdminDashboard() {
       ]);
       
       if (!statsRes.ok || !usersRes.ok) {
-        throw new Error('Erro ao carregar dados');
+        const errorData = await statsRes.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Erro ao carregar dados. Verifique se você é administrador.');
       }
       
       setStats(await statsRes.json());
       setUsers(await usersRes.json());
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao carregar dados');
+      if (err instanceof TypeError && err.message.includes('fetch')) {
+        setError('Não foi possível conectar ao servidor. Verifique se o backend está rodando na porta 3001.');
+      } else {
+        setError(err instanceof Error ? err.message : 'Erro ao carregar dados');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -568,7 +573,12 @@ export default function AdminDashboard() {
           <AlertCircle className="h-16 w-16 mx-auto text-destructive mb-4" />
           <h1 className="text-2xl font-bold mb-2">Erro ao carregar</h1>
           <p className="text-muted-foreground mb-4">{error}</p>
-          <Button onClick={loadData}>Tentar novamente</Button>
+          <div className="space-y-2">
+            <Button onClick={loadData}>Tentar novamente</Button>
+            <p className="text-sm text-muted-foreground mt-4">
+              Verifique se o backend está rodando: <code className="bg-muted px-2 py-1 rounded">cd backend && npm start</code>
+            </p>
+          </div>
         </div>
       </Layout>
     );

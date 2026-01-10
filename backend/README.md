@@ -96,3 +96,31 @@ O banco de dados fica no arquivo `database.sqlite`. Para fazer backup, basta cop
 
 - `PORT`: Porta do servidor (padrão: 3001)
 - `JWT_SECRET`: Chave secreta para tokens JWT (troque em produção!)
+- `APP_URL`: URL do frontend (padrão: http://localhost:5173)
+
+### Configuração de Email (SMTP)
+
+Para habilitar a recuperação de senha por email, configure as variáveis SMTP:
+
+```bash
+# Windows (CMD)
+set SMTP_HOST=smtp.gmail.com
+set SMTP_PORT=587
+set SMTP_USER=seu-email@gmail.com
+set SMTP_PASS=sua-senha-de-app
+npm start
+
+# Windows (PowerShell)
+$env:SMTP_HOST="smtp.gmail.com"
+$env:SMTP_PORT="587"
+$env:SMTP_USER="seu-email@gmail.com"
+$env:SMTP_PASS="sua-senha-de-app"
+npm start
+
+# Linux/Mac
+SMTP_HOST=smtp.gmail.com SMTP_PORT=587 SMTP_USER=seu-email@gmail.com SMTP_PASS=sua-senha-de-app npm start
+```
+
+**Dica Gmail**: Use uma "Senha de App" em vez da senha normal. Gere em: Conta Google → Segurança → Senhas de app.
+
+Se o email não estiver configurado, o sistema ainda funciona mas mostra o link de reset no próprio sistema (útil para testes).
