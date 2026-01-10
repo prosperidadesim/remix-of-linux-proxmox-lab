@@ -1,0 +1,93 @@
+import { useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
+import { cn } from '@/lib/utils';
+import { BookOpen, Brain, ClipboardCheck, History, BarChart3, Settings, Menu, X, Database } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { motion, AnimatePresence } from 'framer-motion';
+
+const navItems = [
+  { to: '/', icon: BookOpen, label: 'Estudar' },
+  { to: '/simulado', icon: Brain, label: 'Simulado' },
+  { to: '/revisao', icon: History, label: 'Revisão' },
+  { to: '/banco', icon: Database, label: 'Banco de Questões' },
+  { to: '/estatisticas', icon: BarChart3, label: 'Estatísticas' },
+  { to: '/configuracoes', icon: Settings, label: 'Configurações' },
+];
+
+export function Sidebar() {
+  const [isOpen, setIsOpen] = useState(false);
+  const location = useLocation();
+
+  return (
+    <>
+      {/* Mobile toggle */}
+      <Button
+        variant="ghost"
+        size="icon"
+        className="fixed top-4 left-4 z-50 lg:hidden"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+      </Button>
+
+      {/* Overlay */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 lg:hidden"
+            onClick={() => setIsOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Sidebar */}
+      <aside
+        className={cn(
+          "fixed left-0 top-0 z-40 h-screen w-64 bg-sidebar border-r border-sidebar-border transition-transform duration-300 lg:translate-x-0",
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        <div className="flex flex-col h-full">
+          {/* Logo */}
+          <div className="p-6 border-b border-sidebar-border">
+            <h1 className="text-xl font-bold text-gradient">MikroTik Study Lab</h1>
+            <p className="text-sm text-muted-foreground mt-1">MTCNA Prep</p>
+          </div>
+
+          {/* Navigation */}
+          <nav className="flex-1 p-4 space-y-1">
+            {navItems.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                onClick={() => setIsOpen(false)}
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200",
+                    "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                    isActive
+                      ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-soft"
+                      : "text-sidebar-foreground"
+                  )
+                }
+              >
+                <item.icon className="h-5 w-5" />
+                <span className="font-medium">{item.label}</span>
+              </NavLink>
+            ))}
+          </nav>
+
+          {/* Footer */}
+          <div className="p-4 border-t border-sidebar-border">
+            <div className="text-xs text-muted-foreground text-center">
+              v1.0.0 • RouterOS v6/v7
+            </div>
+          </div>
+        </div>
+      </aside>
+    </>
+  );
+}
