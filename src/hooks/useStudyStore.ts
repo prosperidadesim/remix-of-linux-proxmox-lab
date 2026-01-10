@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Question, StudyProgress, UserAnswer, ExamResult, QuestionFilters, DEFAULT_FILTERS, Certification } from '@/types/question';
+import { Question, StudyProgress, UserAnswer, ExamResult, QuestionFilters, Certification } from '@/types/question';
 import { initialQuestionBank } from '@/data/questionBank';
+import { useAuth } from '@/contexts/AuthContext';
 
 const STORAGE_KEYS = {
   questions: 'mikrotik-questions',
@@ -22,42 +23,150 @@ const defaultProgress: StudyProgress = {
 };
 
 export function useStudyStore() {
+  const { token, apiUrl, isAuthenticated } = useAuth();
+  
   const [questions, setQuestions] = useState<Question[]>([]);
   const [progress, setProgress] = useState<StudyProgress>(defaultProgress);
   const [answers, setAnswers] = useState<UserAnswer[]>([]);
   const [exams, setExams] = useState<ExamResult[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEYS.questions);
-    if (stored) {
-      setQuestions(JSON.parse(stored));
-    } else {
-      setQuestions(initialQuestionBank);
-      localStorage.setItem(STORAGE_KEYS.questions, JSON.stringify(initialQuestionBank));
+  // Helper para fazer requests à API
+  const fetchApi = useCallback(async (endpoint: string, options: RequestInit = {}) => {
+    if (!token || !apiUrl) return null;
+    
+    try {
+      const response = await fetch(`${apiUrl}${endpoint}`, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          ...options.headers,
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status}`);
+      }
+      
+      return response;
+    } catch (error) {
+      console.error('API request failed:', error);
+      setSyncError('Erro ao sincronizar com o servidor');
+      return null;
     }
+  }, [token, apiUrl]);
 
-    const storedProgress = localStorage.getItem(STORAGE_KEYS.progress);
-    if (storedProgress) setProgress(JSON.parse(storedProgress));
+  // Carrega dados do backend ou localStorage
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true);
+      setSyncError(null);
+      
+      // Sempre carrega questões do localStorage/padrão
+      const storedQuestions = localStorage.getItem(STORAGE_KEYS.questions);
+      if (storedQuestions) {
+        setQuestions(JSON.parse(storedQuestions));
+      } else {
+        setQuestions(initialQuestionBank);
+        localStorage.setItem(STORAGE_KEYS.questions, JSON.stringify(initialQuestionBank));
+      }
+      
+      // Se autenticado, busca do backend
+      if (isAuthenticated && token) {
+        try {
+          const [progressRes, answersRes] = await Promise.all([
+            fetchApi('/api/progress'),
+            fetchApi('/api/answers'),
+          ]);
+          
+          if (progressRes) {
+            const serverProgress = await progressRes.json();
+            setProgress(serverProgress);
+            localStorage.setItem(STORAGE_KEYS.progress, JSON.stringify(serverProgress));
+          }
+          
+          if (answersRes) {
+            const serverAnswers = await answersRes.json();
+            setAnswers(serverAnswers);
+            localStorage.setItem(STORAGE_KEYS.answers, JSON.stringify(serverAnswers));
+          }
+        } catch (error) {
+          console.error('Failed to load from server, using local data');
+          // Fallback para localStorage
+          const storedProgress = localStorage.getItem(STORAGE_KEYS.progress);
+          if (storedProgress) setProgress(JSON.parse(storedProgress));
+          
+          const storedAnswers = localStorage.getItem(STORAGE_KEYS.answers);
+          if (storedAnswers) setAnswers(JSON.parse(storedAnswers));
+        }
+      } else {
+        // Não autenticado, usa localStorage
+        const storedProgress = localStorage.getItem(STORAGE_KEYS.progress);
+        if (storedProgress) setProgress(JSON.parse(storedProgress));
+        
+        const storedAnswers = localStorage.getItem(STORAGE_KEYS.answers);
+        if (storedAnswers) setAnswers(JSON.parse(storedAnswers));
+      }
+      
+      const storedExams = localStorage.getItem(STORAGE_KEYS.exams);
+      if (storedExams) setExams(JSON.parse(storedExams));
+      
+      setIsLoading(false);
+    };
+    
+    loadData();
+  }, [isAuthenticated, token, fetchApi]);
 
-    const storedAnswers = localStorage.getItem(STORAGE_KEYS.answers);
-    if (storedAnswers) setAnswers(JSON.parse(storedAnswers));
+  // Sincroniza progresso com o backend
+  const syncProgress = useCallback(async (newProgress: StudyProgress) => {
+    localStorage.setItem(STORAGE_KEYS.progress, JSON.stringify(newProgress));
+    
+    if (isAuthenticated && token) {
+      setIsSyncing(true);
+      setSyncError(null);
+      
+      try {
+        await fetchApi('/api/progress', {
+          method: 'PUT',
+          body: JSON.stringify(newProgress),
+        });
+      } catch (error) {
+        console.error('Failed to sync progress:', error);
+      } finally {
+        setIsSyncing(false);
+      }
+    }
+  }, [isAuthenticated, token, fetchApi]);
 
-    const storedExams = localStorage.getItem(STORAGE_KEYS.exams);
-    if (storedExams) setExams(JSON.parse(storedExams));
-
-    setIsLoading(false);
-  }, []);
+  // Sincroniza resposta com o backend
+  const syncAnswer = useCallback(async (answer: UserAnswer) => {
+    if (isAuthenticated && token) {
+      try {
+        await fetchApi('/api/answers', {
+          method: 'POST',
+          body: JSON.stringify(answer),
+        });
+      } catch (error) {
+        console.error('Failed to sync answer:', error);
+      }
+    }
+  }, [isAuthenticated, token, fetchApi]);
 
   const saveProgress = useCallback((newProgress: StudyProgress) => {
     setProgress(newProgress);
-    localStorage.setItem(STORAGE_KEYS.progress, JSON.stringify(newProgress));
-  }, []);
+    syncProgress(newProgress);
+  }, [syncProgress]);
 
   const recordAnswer = useCallback((answer: UserAnswer) => {
     const newAnswers = [...answers, answer];
     setAnswers(newAnswers);
     localStorage.setItem(STORAGE_KEYS.answers, JSON.stringify(newAnswers));
+    
+    // Sincroniza resposta com backend
+    syncAnswer(answer);
 
     const question = questions.find(q => q.id === answer.questionId);
     if (question) {
@@ -89,7 +198,7 @@ export function useStudyStore() {
       
       saveProgress(newProgress);
     }
-  }, [answers, questions, progress, saveProgress]);
+  }, [answers, questions, progress, saveProgress, syncAnswer]);
 
   const toggleMarkForReview = useCallback((questionId: string) => {
     const newProgress = { ...progress };
@@ -146,6 +255,8 @@ export function useStudyStore() {
     answers,
     exams,
     isLoading,
+    isSyncing,
+    syncError,
     recordAnswer,
     toggleMarkForReview,
     filterQuestions,
