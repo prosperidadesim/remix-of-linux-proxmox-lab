@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import Simulado from "./pages/Simulado";
 import Revisao from "./pages/Revisao";
 import BancoQuestoes from "./pages/BancoQuestoes";
+import APIPython from "./pages/APIPython";
 import Estatisticas from "./pages/Estatisticas";
 import Configuracoes from "./pages/Configuracoes";
 import NotFound from "./pages/NotFound";
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/simulado" element={<Simulado />} />
           <Route path="/revisao" element={<Revisao />} />
           <Route path="/banco" element={<BancoQuestoes />} />
+          <Route path="/api-python" element={<APIPython />} />
           <Route path="/estatisticas" element={<Estatisticas />} />
           <Route path="/configuracoes" element={<Configuracoes />} />
           <Route path="*" element={<NotFound />} />
