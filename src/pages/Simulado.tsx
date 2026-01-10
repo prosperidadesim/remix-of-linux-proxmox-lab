@@ -11,7 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { Brain, Clock, Target, Trophy, ArrowRight, RotateCcw, CheckCircle2, XCircle, ExternalLink } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Question, ExamResult, CATEGORIES } from '@/types/question';
+import { Question, ExamResult, CATEGORIES, Certification, CERTIFICATIONS } from '@/types/question';
 import { cn } from '@/lib/utils';
 
 type ExamMode = 'setup' | 'running' | 'result';
@@ -22,9 +22,25 @@ export default function Simulado() {
   
   const [mode, setMode] = useState<ExamMode>('setup');
   const [examType, setExamType] = useState<ExamType>('prova');
+  const [selectedCertification, setSelectedCertification] = useState<Certification | 'all'>('all');
   const [questionCount, setQuestionCount] = useState(30);
   const [timeLimit, setTimeLimit] = useState(30);
   const [useTimer, setUseTimer] = useState(true);
+
+  // Filter questions by certification
+  const filteredQuestions = useMemo(() => {
+    if (selectedCertification === 'all') return questions;
+    return questions.filter(q => q.certificacao === selectedCertification);
+  }, [questions, selectedCertification]);
+
+  // Count questions by certification
+  const questionCountByCert = useMemo(() => {
+    const counts: Record<string, number> = { all: questions.length };
+    CERTIFICATIONS.forEach(cert => {
+      counts[cert.id] = questions.filter(q => q.certificacao === cert.id).length;
+    });
+    return counts;
+  }, [questions]);
   
   const [examQuestions, setExamQuestions] = useState<Question[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -52,7 +68,7 @@ export default function Simulado() {
   }, [mode, useTimer, timeRemaining]);
 
   const startExam = () => {
-    const shuffled = [...questions].sort(() => Math.random() - 0.5).slice(0, questionCount);
+    const shuffled = [...filteredQuestions].sort(() => Math.random() - 0.5).slice(0, questionCount);
     setExamQuestions(shuffled);
     setCurrentIndex(0);
     setSelectedAnswers({});
@@ -145,13 +161,62 @@ export default function Simulado() {
   }, [result, examQuestions]);
 
   if (mode === 'setup') {
+    const selectedCertInfo = selectedCertification !== 'all' 
+      ? CERTIFICATIONS.find(c => c.id === selectedCertification) 
+      : null;
+
     return (
       <Layout>
         <div className="max-w-2xl mx-auto space-y-6">
           <div className="text-center">
-            <h1 className="text-3xl font-bold mb-2">Simulado MTCNA</h1>
+            <h1 className="text-3xl font-bold mb-2">
+              Simulado {selectedCertInfo ? selectedCertInfo.nome : 'MikroTik'}
+            </h1>
             <p className="text-muted-foreground">Configure seu simulado e teste seus conhecimentos</p>
           </div>
+
+          {/* Certification Filter */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="h-5 w-5" />
+                Certificação
+              </CardTitle>
+              <CardDescription>Selecione uma certificação para focar seus estudos</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                <Button
+                  variant={selectedCertification === 'all' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setSelectedCertification('all')}
+                  className="justify-between"
+                >
+                  <span>Todas</span>
+                  <Badge variant="secondary" className="ml-1">{questionCountByCert.all}</Badge>
+                </Button>
+                {CERTIFICATIONS.map(cert => (
+                  <Button
+                    key={cert.id}
+                    variant={selectedCertification === cert.id ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSelectedCertification(cert.id)}
+                    className="justify-between"
+                    disabled={questionCountByCert[cert.id] === 0}
+                  >
+                    <span>{cert.id}</span>
+                    <Badge variant="secondary" className="ml-1">{questionCountByCert[cert.id]}</Badge>
+                  </Button>
+                ))}
+              </div>
+              {selectedCertInfo && (
+                <div className="mt-4 p-3 rounded-lg bg-muted">
+                  <p className="text-sm font-medium">{selectedCertInfo.nome}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{selectedCertInfo.descricao}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           <Card>
             <CardHeader>
@@ -201,11 +266,14 @@ export default function Simulado() {
                 <Slider
                   value={[questionCount]}
                   onValueChange={([v]) => setQuestionCount(v)}
-                  min={10}
-                  max={Math.min(60, questions.length)}
+                  min={5}
+                  max={Math.min(60, filteredQuestions.length)}
                   step={5}
                   className="w-full"
                 />
+                <p className="text-xs text-muted-foreground">
+                  {filteredQuestions.length} questões disponíveis
+                </p>
               </div>
 
               {/* Timer */}
