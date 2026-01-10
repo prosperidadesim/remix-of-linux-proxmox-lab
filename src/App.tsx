@@ -10,6 +10,7 @@ import BancoQuestoes from "./pages/BancoQuestoes";
 import APIPython from "./pages/APIPython";
 import Estatisticas from "./pages/Estatisticas";
 import Configuracoes from "./pages/Configuracoes";
+import Scripts from "./pages/Scripts";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/api-python" element={<APIPython />} />
           <Route path="/estatisticas" element={<Estatisticas />} />
           <Route path="/configuracoes" element={<Configuracoes />} />
+          <Route path="/scripts" element={<Scripts />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
