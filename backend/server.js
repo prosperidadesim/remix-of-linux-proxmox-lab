@@ -3,11 +3,38 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const Database = require('better-sqlite3');
+const nodemailer = require('nodemailer');
+const crypto = require('crypto');
 const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET || 'mikrotik-study-secret-key-change-in-production';
+const APP_URL = process.env.APP_URL || 'http://localhost:5173';
+
+// Configuração de email (configure com suas credenciais SMTP)
+const SMTP_HOST = process.env.SMTP_HOST || 'smtp.gmail.com';
+const SMTP_PORT = process.env.SMTP_PORT || 587;
+const SMTP_USER = process.env.SMTP_USER || '';
+const SMTP_PASS = process.env.SMTP_PASS || '';
+const SMTP_FROM = process.env.SMTP_FROM || 'MikroTik Study Lab <noreply@local>';
+
+// Transporter de email (só funciona se SMTP estiver configurado)
+let transporter = null;
+if (SMTP_USER && SMTP_PASS) {
+  transporter = nodemailer.createTransport({
+    host: SMTP_HOST,
+    port: SMTP_PORT,
+    secure: SMTP_PORT == 465,
+    auth: {
+      user: SMTP_USER,
+      pass: SMTP_PASS,
+    },
+  });
+  console.log('✓ Email configurado via SMTP');
+} else {
+  console.log('⚠ Email não configurado (defina SMTP_USER e SMTP_PASS)');
+}
 
 // Inicializa o banco de dados
 const db = new Database(path.join(__dirname, 'database.sqlite'));
@@ -65,6 +92,16 @@ db.exec(`
     mode TEXT NOT NULL,
     time_limit INTEGER,
     certification TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    token TEXT NOT NULL UNIQUE,
+    expires_at INTEGER NOT NULL,
+    used BOOLEAN DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
   );
 `);
@@ -189,6 +226,145 @@ app.put('/api/auth/password', authenticate, (req, res) => {
   
   const hashedPassword = bcrypt.hashSync(newPassword, 10);
   db.prepare('UPDATE users SET password = ? WHERE id = ?').run(hashedPassword, req.user.id);
+  
+  res.json({ success: true, message: 'Senha alterada com sucesso' });
+});
+
+// Solicitar recuperação de senha
+app.post('/api/auth/forgot-password', async (req, res) => {
+  const { email } = req.body;
+  
+  if (!email) {
+    return res.status(400).json({ error: 'Email é obrigatório' });
+  }
+  
+  const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+  
+  // Sempre retorna sucesso para não revelar se o email existe
+  if (!user) {
+    return res.json({ success: true, message: 'Se o email existir, você receberá instruções' });
+  }
+  
+  // Gera token único
+  const token = crypto.randomBytes(32).toString('hex');
+  const expiresAt = Date.now() + 60 * 60 * 1000; // 1 hora
+  
+  // Invalida tokens anteriores
+  db.prepare('UPDATE password_reset_tokens SET used = 1 WHERE user_id = ?').run(user.id);
+  
+  // Salva novo token
+  db.prepare(`
+    INSERT INTO password_reset_tokens (user_id, token, expires_at)
+    VALUES (?, ?, ?)
+  `).run(user.id, token, expiresAt);
+  
+  const resetLink = `${APP_URL}/reset-password?token=${token}`;
+  
+  // Tenta enviar email se configurado
+  if (transporter) {
+    try {
+      await transporter.sendMail({
+        from: SMTP_FROM,
+        to: user.email,
+        subject: 'Recuperação de Senha - MikroTik Study Lab',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #333;">Recuperação de Senha</h2>
+            <p>Olá <strong>${user.display_name}</strong>,</p>
+            <p>Recebemos uma solicitação para redefinir sua senha no MikroTik Study Lab.</p>
+            <p>Clique no botão abaixo para criar uma nova senha:</p>
+            <p style="text-align: center; margin: 30px 0;">
+              <a href="${resetLink}" 
+                 style="background-color: #0066cc; color: white; padding: 12px 24px; 
+                        text-decoration: none; border-radius: 6px; display: inline-block;">
+                Redefinir Senha
+              </a>
+            </p>
+            <p>Ou copie e cole este link no navegador:</p>
+            <p style="background: #f5f5f5; padding: 10px; word-break: break-all; font-size: 12px;">
+              ${resetLink}
+            </p>
+            <p><strong>Este link expira em 1 hora.</strong></p>
+            <p>Se você não solicitou esta recuperação, ignore este email.</p>
+            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+            <p style="color: #888; font-size: 12px;">MikroTik Study Lab</p>
+          </div>
+        `,
+      });
+      console.log(`✓ Email de recuperação enviado para ${user.email}`);
+    } catch (err) {
+      console.error('Erro ao enviar email:', err.message);
+      // Retorna o token diretamente se email falhar (para testes locais)
+      return res.json({ 
+        success: true, 
+        message: 'Email não pôde ser enviado. Use o link manual.',
+        resetLink: resetLink,
+        warning: 'Configure SMTP para envio de emails'
+      });
+    }
+  } else {
+    // Sem SMTP configurado, retorna link diretamente
+    console.log(`⚠ SMTP não configurado. Link de reset: ${resetLink}`);
+    return res.json({ 
+      success: true, 
+      message: 'Email não configurado. Use o link abaixo.',
+      resetLink: resetLink,
+      warning: 'Configure SMTP_USER e SMTP_PASS para envio de emails'
+    });
+  }
+  
+  res.json({ success: true, message: 'Email de recuperação enviado' });
+});
+
+// Validar token de reset
+app.get('/api/auth/reset-password/:token', (req, res) => {
+  const { token } = req.params;
+  
+  const resetToken = db.prepare(`
+    SELECT * FROM password_reset_tokens 
+    WHERE token = ? AND used = 0 AND expires_at > ?
+  `).get(token, Date.now());
+  
+  if (!resetToken) {
+    return res.status(400).json({ error: 'Token inválido ou expirado' });
+  }
+  
+  const user = db.prepare('SELECT display_name, email FROM users WHERE id = ?').get(resetToken.user_id);
+  
+  res.json({ 
+    valid: true, 
+    displayName: user?.display_name,
+    email: user?.email 
+  });
+});
+
+// Redefinir senha com token
+app.post('/api/auth/reset-password', (req, res) => {
+  const { token, newPassword } = req.body;
+  
+  if (!token || !newPassword) {
+    return res.status(400).json({ error: 'Token e nova senha são obrigatórios' });
+  }
+  
+  if (newPassword.length < 6) {
+    return res.status(400).json({ error: 'A senha deve ter pelo menos 6 caracteres' });
+  }
+  
+  const resetToken = db.prepare(`
+    SELECT * FROM password_reset_tokens 
+    WHERE token = ? AND used = 0 AND expires_at > ?
+  `).get(token, Date.now());
+  
+  if (!resetToken) {
+    return res.status(400).json({ error: 'Token inválido ou expirado' });
+  }
+  
+  // Atualiza senha
+  const hashedPassword = bcrypt.hashSync(newPassword, 10);
+  db.prepare('UPDATE users SET password = ? WHERE id = ?').run(hashedPassword, resetToken.user_id);
+  
+  // Marca token como usado
+  db.prepare('UPDATE password_reset_tokens SET used = 1 WHERE id = ?').run(resetToken.id);
   
   res.json({ success: true, message: 'Senha alterada com sucesso' });
 });

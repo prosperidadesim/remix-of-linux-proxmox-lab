@@ -12,6 +12,8 @@
     "cors": "^2.8.5",
     "better-sqlite3": "^9.4.3",
     "bcryptjs": "^2.4.3",
-    "jsonwebtoken": "^9.0.2"
+    "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^6.9.8",
+    "crypto": "^1.0.1"
   }
 }
