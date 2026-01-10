@@ -106,6 +106,7 @@ export default function BancoQuestoes() {
           } else {
             validQuestions.push({
               id: q.id,
+              certificacao: q.certificacao || 'MTCNA',
               categoria: q.categoria || 'Misc',
               dificuldade: q.dificuldade || 'Medium',
               pergunta: q.pergunta,
@@ -117,6 +118,7 @@ export default function BancoQuestoes() {
               tags: q.tags || [],
               rosVersion: q.rosVersion || 'ambos',
               comandoRelacionado: q.comandoRelacionado,
+              pythonAPI: q.pythonAPI,
             });
           }
         });
