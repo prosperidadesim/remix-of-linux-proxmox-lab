@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -96,6 +96,14 @@ export default function Login() {
                   placeholder="Digite sua senha"
                   required
                 />
+                <div className="text-right">
+                  <Link
+                    to="/forgot-password"
+                    className="text-xs text-muted-foreground hover:text-primary"
+                  >
+                    Esqueceu a senha?
+                  </Link>
+                </div>
               </div>
               
               <Button type="submit" className="w-full" disabled={isLoading}>
