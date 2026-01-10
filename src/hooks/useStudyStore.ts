@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Question, StudyProgress, UserAnswer, ExamResult, QuestionFilters, DEFAULT_FILTERS } from '@/types/question';
+import { Question, StudyProgress, UserAnswer, ExamResult, QuestionFilters, DEFAULT_FILTERS, Certification } from '@/types/question';
 import { initialQuestionBank } from '@/data/questionBank';
 
 const STORAGE_KEYS = {
@@ -18,6 +18,7 @@ const defaultProgress: StudyProgress = {
   lastStudyDate: Date.now(),
   streak: 0,
   categoryProgress: {},
+  certificationProgress: {} as Record<Certification, { correct: number; total: number }>,
 };
 
 export function useStudyStore() {
@@ -89,6 +90,7 @@ export function useStudyStore() {
 
   const filterQuestions = useCallback((filters: QuestionFilters): Question[] => {
     return questions.filter(q => {
+      if (filters.certificacoes.length && !filters.certificacoes.includes(q.certificacao)) return false;
       if (filters.categorias.length && !filters.categorias.includes(q.categoria)) return false;
       if (filters.dificuldades.length && !filters.dificuldades.includes(q.dificuldade)) return false;
       if (filters.rosVersion !== 'todos' && q.rosVersion !== 'ambos' && q.rosVersion !== filters.rosVersion) return false;
@@ -97,6 +99,7 @@ export function useStudyStore() {
         const lastAnswer = [...answers].reverse().find(a => a.questionId === q.id);
         if (!lastAnswer || lastAnswer.isCorrect) return false;
       }
+      if (filters.apenasComPythonAPI && !q.pythonAPI) return false;
       return true;
     });
   }, [questions, answers, progress]);
