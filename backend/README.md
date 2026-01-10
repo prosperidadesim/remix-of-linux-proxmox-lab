@@ -2,9 +2,11 @@
 
 Backend Node.js + SQLite para controle de usuários e acompanhamento de desempenho.
 
+**Usa `sql.js` (SQLite compilado para JavaScript) - não precisa de ferramentas de compilação C++!**
+
 ## Requisitos
 
-- Node.js 18+ 
+- Node.js 18+ (recomendado: v20 ou v22 LTS)
 - npm ou yarn
 
 ## Instalação
