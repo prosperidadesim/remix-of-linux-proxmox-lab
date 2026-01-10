@@ -70,11 +70,22 @@ export function useStudyStore() {
       }
       newProgress.lastStudyDate = Date.now();
       
+      // Category progress
       if (!newProgress.categoryProgress[question.categoria]) {
         newProgress.categoryProgress[question.categoria] = { correct: 0, total: 0 };
       }
       newProgress.categoryProgress[question.categoria].total++;
       if (answer.isCorrect) newProgress.categoryProgress[question.categoria].correct++;
+      
+      // Certification progress
+      if (!newProgress.certificationProgress) {
+        newProgress.certificationProgress = {} as Record<Certification, { correct: number; total: number }>;
+      }
+      if (!newProgress.certificationProgress[question.certificacao]) {
+        newProgress.certificationProgress[question.certificacao] = { correct: 0, total: 0 };
+      }
+      newProgress.certificationProgress[question.certificacao].total++;
+      if (answer.isCorrect) newProgress.certificationProgress[question.certificacao].correct++;
       
       saveProgress(newProgress);
     }
