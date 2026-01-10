@@ -401,6 +401,136 @@ export default function AdminDashboard() {
       margin: { left: 14, right: 14 },
     });
 
+    // ========== CHARTS PAGE ==========
+    doc.addPage();
+    doc.setFontSize(16);
+    doc.setTextColor(0, 102, 204);
+    doc.text('Gráficos de Evolução', pageWidth / 2, 20, { align: 'center' });
+
+    // Activity Chart (Bar Chart)
+    const chartStartY = 35;
+    const chartWidth = pageWidth - 40;
+    const chartHeight = 60;
+    const chartX = 20;
+    
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    doc.text('Atividade Semanal (Questões Respondidas)', 14, chartStartY);
+
+    // Draw chart background
+    doc.setFillColor(248, 249, 250);
+    doc.rect(chartX, chartStartY + 5, chartWidth, chartHeight, 'F');
+    
+    // Draw grid lines
+    doc.setDrawColor(220, 220, 220);
+    doc.setLineWidth(0.3);
+    for (let i = 0; i <= 4; i++) {
+      const y = chartStartY + 5 + (chartHeight / 4) * i;
+      doc.line(chartX, y, chartX + chartWidth, y);
+    }
+
+    // Get max value for scaling
+    const activityData = stats.dailyActivity;
+    const maxActivity = Math.max(...activityData.map(d => d.count), 1);
+    
+    // Draw bars
+    const barWidth = (chartWidth - 20) / activityData.length - 8;
+    activityData.forEach((day, index) => {
+      const barHeight = (day.count / maxActivity) * (chartHeight - 15);
+      const x = chartX + 10 + index * (barWidth + 8);
+      const y = chartStartY + 5 + chartHeight - barHeight - 10;
+      
+      // Bar
+      doc.setFillColor(0, 102, 204);
+      if (barHeight > 0) {
+        doc.roundedRect(x, y, barWidth, barHeight, 2, 2, 'F');
+      }
+      
+      // Value on top
+      doc.setFontSize(8);
+      doc.setTextColor(0, 102, 204);
+      doc.text(day.count.toString(), x + barWidth / 2, y - 2, { align: 'center' });
+      
+      // Day label
+      doc.setTextColor(100, 100, 100);
+      doc.text(day.date, x + barWidth / 2, chartStartY + 5 + chartHeight - 2, { align: 'center' });
+    });
+
+    // Performance by User Chart (Horizontal Bar Chart)
+    const chart2StartY = chartStartY + chartHeight + 25;
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    doc.text('Taxa de Acerto por Usuário (%)', 14, chart2StartY);
+
+    const topUsersForChart = users.slice(0, 8);
+    const barChartHeight = topUsersForChart.length * 15 + 10;
+    
+    // Draw chart background
+    doc.setFillColor(248, 249, 250);
+    doc.rect(chartX, chart2StartY + 5, chartWidth, barChartHeight, 'F');
+
+    // Draw horizontal bars
+    topUsersForChart.forEach((user, index) => {
+      const y = chart2StartY + 12 + index * 15;
+      const barMaxWidth = chartWidth - 80;
+      const barW = (user.stats.accuracy / 100) * barMaxWidth;
+      
+      // User name
+      doc.setFontSize(8);
+      doc.setTextColor(60, 60, 60);
+      const displayName = user.displayName.length > 12 
+        ? user.displayName.substring(0, 12) + '...' 
+        : user.displayName;
+      doc.text(displayName, chartX + 5, y + 4);
+      
+      // Bar
+      const barX = chartX + 70;
+      const barColor = user.stats.accuracy >= 70 ? [34, 197, 94] : user.stats.accuracy >= 50 ? [251, 191, 36] : [239, 68, 68];
+      doc.setFillColor(barColor[0], barColor[1], barColor[2]);
+      if (barW > 0) {
+        doc.roundedRect(barX, y - 2, barW, 10, 2, 2, 'F');
+      }
+      
+      // Percentage
+      doc.setTextColor(barColor[0], barColor[1], barColor[2]);
+      doc.text(`${user.stats.accuracy}%`, barX + barW + 5, y + 4);
+    });
+
+    // Trend Arrow Indicators
+    const chart3StartY = chart2StartY + barChartHeight + 25;
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    doc.text('Indicadores de Performance', 14, chart3StartY);
+
+    // Draw performance indicators
+    const indicators = [
+      { label: 'Taxa de Acerto Global', value: stats.globalAccuracy, suffix: '%', color: stats.globalAccuracy >= 70 ? [34, 197, 94] : [251, 191, 36] },
+      { label: 'Usuários Ativos', value: stats.activeUsers, suffix: ` de ${stats.totalUsers}`, color: [0, 102, 204] },
+      { label: 'Respostas Corretas', value: Math.round((stats.correctAnswers / Math.max(stats.totalAnswers, 1)) * 100), suffix: '%', color: [34, 197, 94] },
+    ];
+
+    const indicatorWidth = (chartWidth - 20) / indicators.length;
+    indicators.forEach((ind, index) => {
+      const x = chartX + 10 + index * indicatorWidth;
+      const y = chart3StartY + 10;
+      
+      // Box
+      doc.setFillColor(255, 255, 255);
+      doc.setDrawColor(ind.color[0], ind.color[1], ind.color[2]);
+      doc.setLineWidth(1);
+      doc.roundedRect(x, y, indicatorWidth - 10, 35, 3, 3, 'FD');
+      
+      // Value
+      doc.setFontSize(18);
+      doc.setTextColor(ind.color[0], ind.color[1], ind.color[2]);
+      doc.text(`${ind.value}${ind.suffix}`, x + (indicatorWidth - 10) / 2, y + 18, { align: 'center' });
+      
+      // Label
+      doc.setFontSize(8);
+      doc.setTextColor(100, 100, 100);
+      doc.text(ind.label, x + (indicatorWidth - 10) / 2, y + 28, { align: 'center' });
+    });
+
     // Footer
     const pageCount = doc.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
