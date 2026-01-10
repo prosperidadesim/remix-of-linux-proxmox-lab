@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useConnectionStatus } from '@/hooks/useConnectionStatus';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, LogIn, Settings2 } from 'lucide-react';
+import { Loader2, LogIn, Settings2, Wifi, WifiOff, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function Login() {
@@ -20,18 +21,29 @@ export default function Login() {
   );
   
   const { login, apiUrl } = useAuth();
+  const { status, serverInfo, checkConnection } = useConnectionStatus(apiUrl);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    
+    if (status === 'disconnected') {
+      setError('Servidor indisponível. Verifique se o backend está rodando.');
+      return;
+    }
+    
     setIsLoading(true);
 
     try {
       await login(username, password);
       navigate('/');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao fazer login');
+      if (err instanceof TypeError && err.message.includes('fetch')) {
+        setError('Não foi possível conectar ao servidor. Verifique a configuração da API.');
+      } else {
+        setError(err instanceof Error ? err.message : 'Erro ao fazer login');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -44,6 +56,22 @@ export default function Login() {
       localStorage.removeItem('mikrotik-api-url');
     }
     window.location.reload();
+  };
+
+  const getStatusColor = () => {
+    switch (status) {
+      case 'connected': return 'text-green-500';
+      case 'disconnected': return 'text-destructive';
+      default: return 'text-muted-foreground';
+    }
+  };
+
+  const getStatusText = () => {
+    switch (status) {
+      case 'connected': return serverInfo || 'Servidor online';
+      case 'disconnected': return 'Servidor offline';
+      default: return 'Verificando conexão...';
+    }
   };
 
   return (
@@ -60,10 +88,47 @@ export default function Login() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Entrar</CardTitle>
-            <CardDescription>
-              Faça login para acessar seus estudos
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Entrar</CardTitle>
+                <CardDescription>
+                  Faça login para acessar seus estudos
+                </CardDescription>
+              </div>
+              {/* Indicador de status da conexão */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={checkConnection}
+                  className="p-1 hover:bg-muted rounded transition-colors"
+                  title="Testar conexão novamente"
+                >
+                  {status === 'checking' ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                  )}
+                </button>
+                <div className={`flex items-center gap-1.5 ${getStatusColor()}`}>
+                  {status === 'connected' ? (
+                    <Wifi className="h-4 w-4" />
+                  ) : status === 'disconnected' ? (
+                    <WifiOff className="h-4 w-4" />
+                  ) : (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            {/* Mensagem de status */}
+            <div className={`text-xs mt-2 ${getStatusColor()}`}>
+              {getStatusText()}
+              {status === 'disconnected' && (
+                <span className="block text-muted-foreground mt-1">
+                  Execute: <code className="bg-muted px-1 py-0.5 rounded text-xs">cd backend && npm start</code>
+                </span>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -106,13 +171,17 @@ export default function Login() {
                 </div>
               </div>
               
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button 
+                type="submit" 
+                className="w-full" 
+                disabled={isLoading || status === 'checking'}
+              >
                 {isLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
                 ) : (
                   <LogIn className="h-4 w-4 mr-2" />
                 )}
-                Entrar
+                {status === 'disconnected' ? 'Servidor Offline' : 'Entrar'}
               </Button>
             </form>
             
@@ -139,7 +208,7 @@ export default function Login() {
                       placeholder={apiUrl}
                     />
                     <p className="text-xs text-muted-foreground">
-                      Deixe em branco para usar: {apiUrl}
+                      Atual: {apiUrl}
                     </p>
                   </div>
                   <Button size="sm" variant="secondary" onClick={handleSaveApiUrl} className="w-full">

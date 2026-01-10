@@ -734,6 +734,15 @@ async function startServer() {
     res.json({ success: true });
   });
 
+  // Endpoint de health check para verificar se o servidor está online
+  app.get('/api/health', (req, res) => {
+    res.json({ 
+      status: 'ok', 
+      message: 'Servidor online',
+      timestamp: new Date().toISOString()
+    });
+  });
+
   // Inicia o servidor
   app.listen(PORT, '0.0.0.0', () => {
     console.log('');
@@ -743,6 +752,7 @@ async function startServer() {
     console.log(`║  🌐 Servidor rodando em: http://0.0.0.0:${PORT}       ║`);
     console.log('║  👤 Login padrão: admin / admin123                 ║');
     console.log('║  💾 Banco de dados: database.sqlite                ║');
+    console.log('║  📧 Email SMTP: ' + (emailTransporter ? '✅ Configurado' : '❌ Não configurado').padEnd(35) + '║');
     console.log('╚════════════════════════════════════════════════════╝');
     console.log('');
   });
