@@ -26,6 +26,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   Table,
   TableBody,
   TableCell,
@@ -46,6 +52,9 @@ import {
   Edit,
   Loader2,
   AlertCircle,
+  Download,
+  FileSpreadsheet,
+  FileText,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
@@ -58,6 +67,9 @@ import {
   CartesianGrid,
   Tooltip,
 } from 'recharts';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface UserStats {
   id: number;
@@ -232,6 +244,183 @@ export default function AdminDashboard() {
     }
   };
 
+  // ========== EXPORT FUNCTIONS ==========
+
+  const exportToExcel = () => {
+    if (!users.length || !stats) {
+      toast.error('Nenhum dado para exportar');
+      return;
+    }
+
+    // Sheet 1: Resumo Geral
+    const summaryData = [
+      ['Relatório de Desempenho da Equipe'],
+      ['Gerado em:', new Date().toLocaleString('pt-BR')],
+      [''],
+      ['Métricas Gerais'],
+      ['Total de Usuários', stats.totalUsers],
+      ['Usuários Ativos (7 dias)', stats.activeUsers],
+      ['Total de Respostas', stats.totalAnswers],
+      ['Respostas Corretas', stats.correctAnswers],
+      ['Taxa de Acerto Global', `${stats.globalAccuracy}%`],
+    ];
+
+    // Sheet 2: Usuários
+    const usersData = users.map(u => ({
+      'Nome': u.displayName,
+      'Usuário': u.username,
+      'Email': u.email,
+      'Função': u.role === 'admin' ? 'Administrador' : 'Usuário',
+      'Questões Respondidas': u.stats.totalAnswered,
+      'Corretas': u.stats.totalCorrect,
+      'Incorretas': u.stats.totalIncorrect,
+      'Taxa de Acerto (%)': u.stats.accuracy,
+      'Sequência': u.stats.streak,
+      'Último Acesso': u.lastLogin ? new Date(u.lastLogin).toLocaleDateString('pt-BR') : 'Nunca',
+      'Criado em': new Date(u.createdAt).toLocaleDateString('pt-BR'),
+    }));
+
+    // Sheet 3: Ranking
+    const rankingData = stats.topUsers.map((u, index) => ({
+      'Posição': index + 1,
+      'Nome': u.displayName,
+      'Usuário': u.username,
+      'Total Respondidas': u.totalAnswered,
+      'Total Corretas': u.totalCorrect,
+      'Taxa de Acerto (%)': u.accuracy,
+      'Sequência': u.streak,
+    }));
+
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+    
+    const ws1 = XLSX.utils.aoa_to_sheet(summaryData);
+    XLSX.utils.book_append_sheet(wb, ws1, 'Resumo');
+    
+    const ws2 = XLSX.utils.json_to_sheet(usersData);
+    XLSX.utils.book_append_sheet(wb, ws2, 'Usuários');
+    
+    const ws3 = XLSX.utils.json_to_sheet(rankingData);
+    XLSX.utils.book_append_sheet(wb, ws3, 'Ranking');
+
+    // Download
+    const fileName = `relatorio-equipe-${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+    toast.success('Relatório Excel exportado!');
+  };
+
+  const exportToPDF = () => {
+    if (!users.length || !stats) {
+      toast.error('Nenhum dado para exportar');
+      return;
+    }
+
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    
+    // Title
+    doc.setFontSize(20);
+    doc.setTextColor(0, 102, 204);
+    doc.text('Relatório de Desempenho da Equipe', pageWidth / 2, 20, { align: 'center' });
+    
+    doc.setFontSize(10);
+    doc.setTextColor(128, 128, 128);
+    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth / 2, 28, { align: 'center' });
+
+    // Summary Cards
+    doc.setFontSize(14);
+    doc.setTextColor(0, 0, 0);
+    doc.text('Métricas Gerais', 14, 42);
+
+    const summaryData = [
+      ['Total de Usuários', stats.totalUsers.toString()],
+      ['Usuários Ativos (7 dias)', stats.activeUsers.toString()],
+      ['Total de Respostas', stats.totalAnswers.toString()],
+      ['Respostas Corretas', stats.correctAnswers.toString()],
+      ['Taxa de Acerto Global', `${stats.globalAccuracy}%`],
+    ];
+
+    autoTable(doc, {
+      startY: 46,
+      head: [['Métrica', 'Valor']],
+      body: summaryData,
+      theme: 'striped',
+      headStyles: { fillColor: [0, 102, 204] },
+      margin: { left: 14, right: 14 },
+    });
+
+    // Users Table
+    const finalY1 = (doc as any).lastAutoTable.finalY || 80;
+    doc.setFontSize(14);
+    doc.text('Desempenho por Usuário', 14, finalY1 + 12);
+
+    const usersTableData = users.map(u => [
+      u.displayName,
+      u.stats.totalAnswered.toString(),
+      u.stats.totalCorrect.toString(),
+      `${u.stats.accuracy}%`,
+      u.stats.streak.toString(),
+      u.lastLogin ? new Date(u.lastLogin).toLocaleDateString('pt-BR') : 'Nunca',
+    ]);
+
+    autoTable(doc, {
+      startY: finalY1 + 16,
+      head: [['Nome', 'Respondidas', 'Corretas', 'Acerto', 'Sequência', 'Último Acesso']],
+      body: usersTableData,
+      theme: 'striped',
+      headStyles: { fillColor: [0, 102, 204] },
+      margin: { left: 14, right: 14 },
+      styles: { fontSize: 9 },
+    });
+
+    // Ranking (new page if needed)
+    const finalY2 = (doc as any).lastAutoTable.finalY || 150;
+    if (finalY2 > 220) {
+      doc.addPage();
+      doc.setFontSize(14);
+      doc.text('Top 10 - Ranking', 14, 20);
+    } else {
+      doc.setFontSize(14);
+      doc.text('Top 10 - Ranking', 14, finalY2 + 12);
+    }
+
+    const rankingTableData = stats.topUsers.slice(0, 10).map((u, index) => [
+      `${index + 1}º`,
+      u.displayName,
+      u.totalCorrect.toString(),
+      `${u.accuracy}%`,
+      `${u.streak} 🔥`,
+    ]);
+
+    autoTable(doc, {
+      startY: finalY2 > 220 ? 24 : finalY2 + 16,
+      head: [['Pos.', 'Nome', 'Corretas', 'Acerto', 'Sequência']],
+      body: rankingTableData,
+      theme: 'striped',
+      headStyles: { fillColor: [255, 193, 7], textColor: [0, 0, 0] },
+      margin: { left: 14, right: 14 },
+    });
+
+    // Footer
+    const pageCount = doc.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(128, 128, 128);
+      doc.text(
+        `MikroTik Study Lab - Página ${i} de ${pageCount}`,
+        pageWidth / 2,
+        doc.internal.pageSize.getHeight() - 10,
+        { align: 'center' }
+      );
+    }
+
+    // Download
+    const fileName = `relatorio-equipe-${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(fileName);
+    toast.success('Relatório PDF exportado!');
+  };
+
   if (isLoading) {
     return (
       <Layout>
@@ -258,19 +447,39 @@ export default function AdminDashboard() {
   return (
     <Layout>
       <div className="max-w-7xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-3xl font-bold">Painel Administrativo</h1>
             <p className="text-muted-foreground">Gerencie usuários e acompanhe o desempenho</p>
           </div>
           
-          <Dialog open={showNewUser} onOpenChange={setShowNewUser}>
-            <DialogTrigger asChild>
-              <Button>
-                <UserPlus className="h-4 w-4 mr-2" />
-                Novo Usuário
-              </Button>
-            </DialogTrigger>
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <Download className="h-4 w-4 mr-2" />
+                  Exportar
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={exportToExcel}>
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  Exportar Excel (.xlsx)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportToPDF}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Exportar PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            
+            <Dialog open={showNewUser} onOpenChange={setShowNewUser}>
+              <DialogTrigger asChild>
+                <Button>
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Novo Usuário
+                </Button>
+              </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Criar Novo Usuário</DialogTitle>
@@ -344,6 +553,7 @@ export default function AdminDashboard() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         {/* Overview Stats */}
