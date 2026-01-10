@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { BookOpen, Brain, ClipboardCheck, History, BarChart3, Settings, Menu, X, Database } from 'lucide-react';
+import { BookOpen, Brain, ClipboardCheck, History, BarChart3, Settings, Menu, X, Database, Code2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -10,6 +10,7 @@ const navItems = [
   { to: '/simulado', icon: Brain, label: 'Simulado' },
   { to: '/revisao', icon: History, label: 'Revisão' },
   { to: '/banco', icon: Database, label: 'Banco de Questões' },
+  { to: '/api-python', icon: Code2, label: 'API Python' },
   { to: '/estatisticas', icon: BarChart3, label: 'Estatísticas' },
   { to: '/configuracoes', icon: Settings, label: 'Configurações' },
 ];
