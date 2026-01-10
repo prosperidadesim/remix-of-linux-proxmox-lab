@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { BookOpen, Brain, ClipboardCheck, History, BarChart3, Settings, Menu, X, Database, Code2, Terminal } from 'lucide-react';
+import { BookOpen, Brain, History, BarChart3, Settings, Menu, X, Database, Code2, Terminal, Shield, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '@/contexts/AuthContext';
 
 const navItems = [
   { to: '/', icon: BookOpen, label: 'Estudar' },
@@ -19,6 +20,7 @@ const navItems = [
 export function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
+  const { user, isAdmin, logout } = useAuth();
 
   return (
     <>
@@ -80,11 +82,45 @@ export function Sidebar() {
                 <span className="font-medium">{item.label}</span>
               </NavLink>
             ))}
+          {/* Admin link */}
+            {isAdmin && (
+              <NavLink
+                to="/admin"
+                onClick={() => setIsOpen(false)}
+                className={({ isActive }) =>
+                  cn(
+                    "flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 mt-4 border-t border-sidebar-border pt-4",
+                    "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                    isActive
+                      ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-soft"
+                      : "text-sidebar-foreground"
+                  )
+                }
+              >
+                <Shield className="h-5 w-5" />
+                <span className="font-medium">Painel Admin</span>
+              </NavLink>
+            )}
           </nav>
 
-          {/* Footer */}
+          {/* User info and logout */}
           <div className="p-4 border-t border-sidebar-border">
-            <div className="text-xs text-muted-foreground text-center">
+            {user && (
+              <div className="mb-3">
+                <p className="text-sm font-medium truncate">{user.displayName}</p>
+                <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+              </div>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start text-muted-foreground hover:text-foreground"
+              onClick={logout}
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Sair
+            </Button>
+            <div className="text-xs text-muted-foreground text-center mt-3">
               v1.0.0 • RouterOS v6/v7
             </div>
           </div>
