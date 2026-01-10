@@ -166,6 +166,33 @@ app.post('/api/auth/register', authenticate, requireAdmin, (req, res) => {
   }
 });
 
+// Alterar senha (próprio usuário)
+app.put('/api/auth/password', authenticate, (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ error: 'Senha atual e nova senha são obrigatórias' });
+  }
+  
+  if (newPassword.length < 6) {
+    return res.status(400).json({ error: 'A nova senha deve ter pelo menos 6 caracteres' });
+  }
+  
+  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+  if (!user) {
+    return res.status(404).json({ error: 'Usuário não encontrado' });
+  }
+  
+  if (!bcrypt.compareSync(currentPassword, user.password)) {
+    return res.status(401).json({ error: 'Senha atual incorreta' });
+  }
+  
+  const hashedPassword = bcrypt.hashSync(newPassword, 10);
+  db.prepare('UPDATE users SET password = ? WHERE id = ?').run(hashedPassword, req.user.id);
+  
+  res.json({ success: true, message: 'Senha alterada com sucesso' });
+});
+
 // Verifica token
 app.get('/api/auth/me', authenticate, (req, res) => {
   const user = db.prepare('SELECT id, username, email, display_name, role FROM users WHERE id = ?').get(req.user.id);
