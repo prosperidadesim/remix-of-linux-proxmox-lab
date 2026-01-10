@@ -2,10 +2,13 @@ import { useState } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { useStudyStore } from '@/hooks/useStudyStore';
 import { useTheme } from '@/hooks/useTheme';
+import { useAuth } from '@/contexts/AuthContext';
+import { useApi } from '@/hooks/useApi';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import {
   AlertDialog,
@@ -26,7 +29,10 @@ import {
   Moon,
   Sun,
   Info,
-  Github
+  Lock,
+  Loader2,
+  User,
+  CheckCircle2
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
@@ -34,7 +40,15 @@ import { toast } from 'sonner';
 export default function Configuracoes() {
   const { theme, toggleTheme } = useTheme();
   const { progress, questions } = useStudyStore();
-  const [isClearing, setIsClearing] = useState(false);
+  const { user } = useAuth();
+  const { fetchApi } = useApi();
+  
+  // Password change state
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
 
   const clearProgress = () => {
     localStorage.removeItem('mikrotik-progress');
@@ -53,6 +67,48 @@ export default function Configuracoes() {
     window.location.reload();
   };
 
+  const handleChangePassword = async () => {
+    setPasswordError('');
+    
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordError('Preencha todos os campos');
+      return;
+    }
+    
+    if (newPassword.length < 6) {
+      setPasswordError('A nova senha deve ter pelo menos 6 caracteres');
+      return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      setPasswordError('As senhas não coincidem');
+      return;
+    }
+    
+    setIsChangingPassword(true);
+    
+    try {
+      const res = await fetchApi('/api/auth/password', {
+        method: 'PUT',
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Erro ao alterar senha');
+      }
+      
+      toast.success('Senha alterada com sucesso!');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err) {
+      setPasswordError(err instanceof Error ? err.message : 'Erro ao alterar senha');
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
   return (
     <Layout>
       <div className="max-w-2xl mx-auto space-y-6">
@@ -61,8 +117,109 @@ export default function Configuracoes() {
           <p className="text-muted-foreground">Personalize sua experiência de estudo</p>
         </div>
 
-        {/* Appearance */}
+        {/* Account */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Minha Conta
+              </CardTitle>
+              <CardDescription>Informações da sua conta</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="p-4 rounded-lg bg-muted/50">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Nome</p>
+                    <p className="font-medium">{user?.displayName || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Email</p>
+                    <p className="font-medium">{user?.email || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Usuário</p>
+                    <p className="font-medium">{user?.username || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Função</p>
+                    <p className="font-medium">{user?.role === 'admin' ? 'Administrador' : 'Usuário'}</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Change Password */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Lock className="h-5 w-5" />
+                Alterar Senha
+              </CardTitle>
+              <CardDescription>Atualize sua senha de acesso</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <Label htmlFor="currentPassword">Senha Atual</Label>
+                  <Input
+                    id="currentPassword"
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="Digite sua senha atual"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="newPassword">Nova Senha</Label>
+                  <Input
+                    id="newPassword"
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Digite a nova senha (mín. 6 caracteres)"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirmar Nova Senha</Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirme a nova senha"
+                  />
+                </div>
+                
+                {passwordError && (
+                  <p className="text-sm text-destructive">{passwordError}</p>
+                )}
+                
+                <Button 
+                  onClick={handleChangePassword} 
+                  disabled={isChangingPassword}
+                  className="w-full"
+                >
+                  {isChangingPassword ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                  )}
+                  Alterar Senha
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Appearance */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -87,7 +244,7 @@ export default function Configuracoes() {
         </motion.div>
 
         {/* Data Management */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -125,15 +282,15 @@ export default function Configuracoes() {
                   <AlertDialogTrigger asChild>
                     <Button variant="outline" className="w-full gap-2">
                       <RotateCcw className="h-4 w-4" />
-                      Resetar Progresso
+                      Resetar Progresso Local
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>Resetar Progresso?</AlertDialogTitle>
+                      <AlertDialogTitle>Resetar Progresso Local?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        Isso irá apagar todo o seu histórico de respostas e progresso. 
-                        O banco de questões será mantido. Esta ação não pode ser desfeita.
+                        Isso irá apagar o cache local. O progresso no servidor será mantido.
+                        Esta ação não pode ser desfeita.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -147,22 +304,21 @@ export default function Configuracoes() {
                   <AlertDialogTrigger asChild>
                     <Button variant="destructive" className="w-full gap-2">
                       <Trash2 className="h-4 w-4" />
-                      Limpar Todos os Dados
+                      Limpar Cache Local
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>Limpar Todos os Dados?</AlertDialogTitle>
+                      <AlertDialogTitle>Limpar Cache Local?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        Isso irá apagar TODOS os dados: banco de questões, progresso, 
-                        histórico de respostas e simulados. O banco padrão será restaurado. 
-                        Esta ação não pode ser desfeita.
+                        Isso irá limpar os dados em cache no navegador. 
+                        O progresso no servidor será mantido.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancelar</AlertDialogCancel>
                       <AlertDialogAction onClick={clearAllData} className="bg-destructive hover:bg-destructive/90">
-                        Limpar Tudo
+                        Limpar Cache
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
@@ -186,7 +342,7 @@ export default function Configuracoes() {
                 <h3 className="text-xl font-bold text-gradient">MikroTik Study Lab</h3>
                 <p className="text-sm text-muted-foreground">Versão 1.0.0</p>
                 <p className="text-sm text-muted-foreground">
-                  Plataforma de estudos para certificação MTCNA
+                  Plataforma de estudos para certificações MikroTik
                 </p>
               </div>
               
@@ -199,7 +355,7 @@ export default function Configuracoes() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Armazenamento</span>
-                  <span>Local (navegador)</span>
+                  <span>Servidor Local + Cache</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Idioma</span>
