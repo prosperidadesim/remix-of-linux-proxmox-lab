@@ -1,447 +1,553 @@
-// Exemplos de uso da API Python RouterOS (librouteros)
+// Exemplos de uso da API Python do Proxmox VE (proxmoxer)
 
 export const PYTHON_API_INTRO = `
 # Instalação da biblioteca
-# pip install librouteros
+# pip install proxmoxer requests
 
-from librouteros import connect
+from proxmoxer import ProxmoxAPI
 
-# Conexão básica com o RouterOS
-api = connect(
-    username='admin',
-    password='sua_senha',
-    host='192.168.88.1',
-    port=8728  # API padrão (use 8729 para API-SSL)
+# Conexão com o Proxmox VE
+proxmox = ProxmoxAPI(
+    'pve.example.com',  # Hostname ou IP
+    user='root@pam',     # Usuário
+    password='senha',    # Senha (ou use token_name/token_value)
+    verify_ssl=False     # True em produção com certificado válido
 )
 
-# A API retorna generators, então precisamos converter para lista
-# para ver os resultados
+# Conexão alternativa com API Token (recomendado)
+proxmox = ProxmoxAPI(
+    'pve.example.com',
+    user='root@pam',
+    token_name='automation',
+    token_value='xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+    verify_ssl=False
+)
 `;
 
 export const PYTHON_API_EXAMPLES = {
-  // Exemplos gerais
+  // Conexão
   conexao: {
-    titulo: 'Conexão com RouterOS',
-    descricao: 'Como estabelecer conexão com a API do RouterOS usando Python',
-    codigo: `from librouteros import connect
+    titulo: 'Conexão com Proxmox VE',
+    descricao: 'Como estabelecer conexão com a API do Proxmox usando Python',
+    codigo: `from proxmoxer import ProxmoxAPI
 
-# Conexão básica
-api = connect(
-    username='admin',
-    password='',
-    host='192.168.88.1'
+# Conexão com senha
+proxmox = ProxmoxAPI(
+    'pve.example.com',
+    user='root@pam',
+    password='sua_senha',
+    verify_ssl=False
 )
 
-# Com timeout
-api = connect(
-    username='admin',
-    password='senha123',
-    host='192.168.88.1',
-    timeout=10
+# Conexão com API Token (mais seguro)
+proxmox = ProxmoxAPI(
+    'pve.example.com',
+    user='root@pam',
+    token_name='automation',
+    token_value='xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
+    verify_ssl=False
 )
 
-# Usando SSL (porta 8729)
-import ssl
-ctx = ssl.create_default_context()
-ctx.check_hostname = False
-ctx.verify_mode = ssl.CERT_NONE
-
-api = connect(
-    username='admin',
-    password='senha123',
-    host='192.168.88.1',
-    ssl_wrapper=ctx.wrap_socket,
-    port=8729
-)`,
-    saida: '# Conexão estabelecida com sucesso',
+# Testar conexão
+print(proxmox.version.get())`,
+    saida: `{'version': '8.1.3', 'release': '8.1', 'repoid': 'xxxx'}`,
   },
 
-  // DHCP
-  dhcp_leases: {
-    titulo: 'Listar DHCP Leases',
-    descricao: 'Obter lista de todos os leases DHCP ativos',
-    codigo: `# Listar todos os leases DHCP
-leases = api.path('/ip/dhcp-server/lease')
-for lease in leases:
-    print(f"IP: {lease.get('address')} - MAC: {lease.get('mac-address')} - Host: {lease.get('host-name', 'N/A')}")`,
-    saida: `IP: 192.168.88.100 - MAC: AA:BB:CC:DD:EE:FF - Host: laptop-joao
-IP: 192.168.88.101 - MAC: 11:22:33:44:55:66 - Host: celular-maria`,
+  // Nodes
+  nodes_list: {
+    titulo: 'Listar Nós do Cluster',
+    descricao: 'Obter informações de todos os nós do cluster',
+    codigo: `# Listar todos os nós
+for node in proxmox.nodes.get():
+    print(f"Node: {node['node']}")
+    print(f"  Status: {node['status']}")
+    print(f"  CPU: {node.get('cpu', 0)*100:.1f}%")
+    print(f"  Memória: {node.get('mem', 0)/1024/1024/1024:.1f}GB / {node.get('maxmem', 0)/1024/1024/1024:.1f}GB")
+    print(f"  Uptime: {node.get('uptime', 0)//3600}h")
+    print()`,
+    saida: `Node: pve1
+  Status: online
+  CPU: 15.3%
+  Memória: 24.5GB / 64.0GB
+  Uptime: 720h`,
   },
 
-  dhcp_add_static: {
-    titulo: 'Criar Lease Estático',
-    descricao: 'Adicionar uma reserva DHCP estática',
-    codigo: `# Adicionar lease estático
-leases = api.path('/ip/dhcp-server/lease')
-leases.add(
-    address='192.168.88.50',
-    mac_address='AA:BB:CC:DD:EE:FF',
-    comment='Servidor Web'
-)`,
+  // VMs
+  vm_list: {
+    titulo: 'Listar Máquinas Virtuais',
+    descricao: 'Obter lista de todas as VMs em um nó',
+    codigo: `# Listar VMs de um nó específico
+node = 'pve1'
+for vm in proxmox.nodes(node).qemu.get():
+    status = vm.get('status', 'unknown')
+    print(f"VMID: {vm['vmid']} - {vm['name']}")
+    print(f"  Status: {status}")
+    print(f"  Memória: {vm.get('maxmem', 0)/1024/1024/1024:.1f}GB")
+    print(f"  Disco: {vm.get('maxdisk', 0)/1024/1024/1024:.1f}GB")
+    print(f"  CPUs: {vm.get('cpus', 1)}")
+    print()`,
+    saida: `VMID: 100 - ubuntu-server
+  Status: running
+  Memória: 4.0GB
+  Disco: 32.0GB
+  CPUs: 2`,
+  },
+
+  vm_create: {
+    titulo: 'Criar Máquina Virtual',
+    descricao: 'Criar uma nova VM via API',
+    codigo: `# Criar nova VM
+node = 'pve1'
+vmid = 105
+storage = 'local-lvm'
+
+proxmox.nodes(node).qemu.create(
+    vmid=vmid,
+    name='vm-api-test',
+    memory=2048,
+    cores=2,
+    sockets=1,
+    cpu='host',
+    net0='virtio,bridge=vmbr0',
+    scsihw='virtio-scsi-single',
+    scsi0=f'{storage}:32',
+    ostype='l26',
+    agent='enabled=1'
+)
+
+print(f"VM {vmid} criada com sucesso!")`,
+  },
+
+  vm_start_stop: {
+    titulo: 'Iniciar/Parar VMs',
+    descricao: 'Controlar o estado das VMs',
+    codigo: `node = 'pve1'
+vmid = 100
+
+# Iniciar VM
+proxmox.nodes(node).qemu(vmid).status.start.post()
+print(f"VM {vmid} iniciando...")
+
+# Parar VM (graceful shutdown)
+proxmox.nodes(node).qemu(vmid).status.shutdown.post()
+print(f"VM {vmid} desligando...")
+
+# Parar VM (forçado)
+proxmox.nodes(node).qemu(vmid).status.stop.post()
+print(f"VM {vmid} parada!")
+
+# Reiniciar VM
+proxmox.nodes(node).qemu(vmid).status.reboot.post()
+print(f"VM {vmid} reiniciando...")`,
+  },
+
+  vm_snapshot: {
+    titulo: 'Gerenciar Snapshots',
+    descricao: 'Criar e gerenciar snapshots de VMs',
+    codigo: `node = 'pve1'
+vmid = 100
+
+# Criar snapshot
+proxmox.nodes(node).qemu(vmid).snapshot.create(
+    snapname='backup-antes-update',
+    description='Snapshot antes da atualização'
+)
+print("Snapshot criado!")
+
+# Listar snapshots
+for snap in proxmox.nodes(node).qemu(vmid).snapshot.get():
+    print(f"Snapshot: {snap['name']}")
+    if 'description' in snap:
+        print(f"  Descrição: {snap['description']}")
+
+# Restaurar snapshot
+proxmox.nodes(node).qemu(vmid).snapshot('backup-antes-update').rollback.post()
+print("Snapshot restaurado!")
+
+# Deletar snapshot
+proxmox.nodes(node).qemu(vmid).snapshot('backup-antes-update').delete()
+print("Snapshot removido!")`,
+  },
+
+  vm_clone: {
+    titulo: 'Clonar VM',
+    descricao: 'Criar clone de uma VM existente',
+    codigo: `node = 'pve1'
+source_vmid = 9000  # Template
+new_vmid = 110
+new_name = 'clone-from-template'
+
+# Clone completo
+proxmox.nodes(node).qemu(source_vmid).clone.create(
+    newid=new_vmid,
+    name=new_name,
+    full=True,  # True = full clone, False = linked clone
+    storage='local-lvm'
+)
+
+print(f"Clone {new_vmid} ({new_name}) criado!")`,
+  },
+
+  // Containers
+  ct_list: {
+    titulo: 'Listar Containers LXC',
+    descricao: 'Obter lista de todos os containers',
+    codigo: `node = 'pve1'
+for ct in proxmox.nodes(node).lxc.get():
+    print(f"CTID: {ct['vmid']} - {ct['name']}")
+    print(f"  Status: {ct.get('status', 'unknown')}")
+    print(f"  Memória: {ct.get('maxmem', 0)/1024/1024/1024:.1f}GB")
+    print(f"  Disco: {ct.get('maxdisk', 0)/1024/1024/1024:.1f}GB")
+    print()`,
+    saida: `CTID: 200 - docker-host
+  Status: running
+  Memória: 2.0GB
+  Disco: 16.0GB`,
+  },
+
+  ct_create: {
+    titulo: 'Criar Container',
+    descricao: 'Criar novo container LXC',
+    codigo: `node = 'pve1'
+ctid = 210
+template = 'local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst'
+
+proxmox.nodes(node).lxc.create(
+    vmid=ctid,
+    hostname='ct-api-test',
+    ostemplate=template,
+    storage='local-lvm',
+    rootfs='local-lvm:8',
+    memory=1024,
+    cores=2,
+    net0='name=eth0,bridge=vmbr0,ip=dhcp',
+    password='changeme',
+    unprivileged=1,
+    features='nesting=1',
+    start=False
+)
+
+print(f"Container {ctid} criado!")`,
+  },
+
+  // Storage
+  storage_list: {
+    titulo: 'Listar Storages',
+    descricao: 'Obter informações de storages disponíveis',
+    codigo: `# Listar storages do cluster
+for storage in proxmox.storage.get():
+    print(f"Storage: {storage['storage']}")
+    print(f"  Tipo: {storage['type']}")
+    print(f"  Conteúdo: {storage.get('content', 'N/A')}")
+    print()
+
+# Status de storage em um nó específico
+node = 'pve1'
+for storage in proxmox.nodes(node).storage.get():
+    used_pct = storage.get('used', 0) / storage.get('total', 1) * 100
+    print(f"{storage['storage']}: {used_pct:.1f}% usado")`,
+    saida: `Storage: local
+  Tipo: dir
+  Conteúdo: backup,iso,vztmpl
+
+local: 45.2% usado
+local-lvm: 68.7% usado`,
+  },
+
+  storage_upload_iso: {
+    titulo: 'Upload de ISO',
+    descricao: 'Fazer upload de imagem ISO para o storage',
+    codigo: `import os
+node = 'pve1'
+storage = 'local'
+iso_path = '/path/to/ubuntu-22.04.iso'
+
+# Upload de ISO
+with open(iso_path, 'rb') as f:
+    proxmox.nodes(node).storage(storage).upload.create(
+        content='iso',
+        filename=os.path.basename(iso_path),
+        file=f
+    )
+
+print(f"ISO uploaded para {storage}")
+
+# Listar ISOs disponíveis
+for item in proxmox.nodes(node).storage(storage).content.get():
+    if item['content'] == 'iso':
+        print(f"ISO: {item['volid']}")`,
+  },
+
+  // Backup
+  backup_create: {
+    titulo: 'Criar Backup',
+    descricao: 'Fazer backup de VMs via API',
+    codigo: `node = 'pve1'
+vmid = 100
+storage = 'local'
+
+# Criar backup
+task = proxmox.nodes(node).vzdump.create(
+    vmid=vmid,
+    storage=storage,
+    mode='snapshot',
+    compress='zstd',
+    notes='Backup via API Python'
+)
+
+print(f"Backup iniciado - Task: {task}")
+
+# Listar backups disponíveis
+for item in proxmox.nodes(node).storage(storage).content.get():
+    if item['content'] == 'backup':
+        print(f"Backup: {item['volid']}")
+        print(f"  Tamanho: {item.get('size', 0)/1024/1024/1024:.2f}GB")`,
+  },
+
+  backup_restore: {
+    titulo: 'Restaurar Backup',
+    descricao: 'Restaurar VM a partir de backup',
+    codigo: `node = 'pve1'
+backup_file = 'local:backup/vzdump-qemu-100-2024_01_15-10_00_00.vma.zst'
+new_vmid = 999
+
+# Restaurar backup como nova VM
+proxmox.nodes(node).qemu.create(
+    vmid=new_vmid,
+    archive=backup_file,
+    storage='local-lvm',
+    unique=True  # Gera novos UUIDs
+)
+
+print(f"VM {new_vmid} restaurada do backup!")`,
+  },
+
+  // Cluster
+  cluster_status: {
+    titulo: 'Status do Cluster',
+    descricao: 'Obter informações do cluster',
+    codigo: `# Status geral do cluster
+status = proxmox.cluster.status.get()
+for item in status:
+    if item['type'] == 'cluster':
+        print(f"Cluster: {item['name']}")
+        print(f"  Nodes: {item['nodes']}")
+        print(f"  Quorum: {'OK' if item['quorate'] else 'LOST'}")
+    elif item['type'] == 'node':
+        print(f"  Node: {item['name']} - {'online' if item['online'] else 'offline'}")
+
+# Recursos do cluster
+print("\\nRecursos:")
+for resource in proxmox.cluster.resources.get(type='vm'):
+    print(f"  {resource['name']} (VMID: {resource['vmid']}) - {resource['status']}")`,
+    saida: `Cluster: proxmox-cluster
+  Nodes: 3
+  Quorum: OK
+  Node: pve1 - online
+  Node: pve2 - online
+  Node: pve3 - online
+
+Recursos:
+  ubuntu-server (VMID: 100) - running
+  docker-host (VMID: 200) - running`,
+  },
+
+  // Tasks
+  tasks_list: {
+    titulo: 'Listar Tasks',
+    descricao: 'Monitorar tarefas em execução',
+    codigo: `node = 'pve1'
+
+# Listar tasks recentes
+tasks = proxmox.nodes(node).tasks.get(limit=10)
+for task in tasks:
+    status = task.get('status', 'running')
+    print(f"Task: {task['upid']}")
+    print(f"  Tipo: {task['type']}")
+    print(f"  Status: {status}")
+    print(f"  Início: {task.get('starttime', 'N/A')}")
+    print()
+
+# Verificar status de uma task específica
+upid = 'UPID:pve1:00001234:00ABC123:12345678:vzdump:100:root@pam:'
+task_status = proxmox.nodes(node).tasks(upid).status.get()
+print(f"Status: {task_status['status']}")`,
   },
 
   // Firewall
   firewall_rules: {
-    titulo: 'Listar Regras de Firewall',
-    descricao: 'Obter todas as regras do firewall filter',
-    codigo: `# Listar regras de firewall
-rules = api.path('/ip/firewall/filter')
-for rule in rules:
-    print(f"Chain: {rule.get('chain')} - Action: {rule.get('action')} - Comment: {rule.get('comment', '')}")`,
-  },
+    titulo: 'Regras de Firewall',
+    descricao: 'Gerenciar regras do firewall',
+    codigo: `node = 'pve1'
+vmid = 100
 
-  firewall_add_rule: {
-    titulo: 'Adicionar Regra de Firewall',
-    descricao: 'Criar uma nova regra de firewall',
-    codigo: `# Adicionar regra para bloquear IP
-rules = api.path('/ip/firewall/filter')
-rules.add(
-    chain='input',
-    src_address='10.0.0.100',
-    action='drop',
-    comment='Bloqueio temporário'
-)`,
-  },
+# Listar regras do cluster
+print("Regras do Cluster:")
+for rule in proxmox.cluster.firewall.rules.get():
+    print(f"  {rule.get('action', 'N/A')} - {rule.get('comment', 'sem descrição')}")
 
-  // Interfaces
-  interfaces_list: {
-    titulo: 'Listar Interfaces',
-    descricao: 'Obter informações de todas as interfaces',
-    codigo: `# Listar todas as interfaces
-interfaces = api.path('/interface')
-for iface in interfaces:
-    status = 'UP' if iface.get('running') else 'DOWN'
-    print(f"{iface.get('name')}: {iface.get('type')} - {status}")`,
-    saida: `ether1: ether - UP
-ether2: ether - UP
-wlan1: wlan - UP
-bridge1: bridge - UP`,
-  },
+# Adicionar regra à VM
+proxmox.nodes(node).qemu(vmid).firewall.rules.create(
+    action='ACCEPT',
+    type='in',
+    proto='tcp',
+    dport='22',
+    comment='Allow SSH'
+)
 
-  // IP Address
-  ip_addresses: {
-    titulo: 'Gerenciar Endereços IP',
-    descricao: 'Listar e adicionar endereços IP',
-    codigo: `# Listar endereços IP
-addresses = api.path('/ip/address')
-for addr in addresses:
-    print(f"{addr.get('address')} em {addr.get('interface')}")
+# Habilitar firewall na VM
+proxmox.nodes(node).qemu(vmid).firewall.options.put(
+    enable=1
+)
 
-# Adicionar novo IP
-addresses.add(
-    address='10.0.0.1/24',
-    interface='ether2',
-    comment='Rede interna'
-)`,
-  },
-
-  // Routing
-  routes_list: {
-    titulo: 'Listar Rotas',
-    descricao: 'Obter tabela de roteamento',
-    codigo: `# Listar rotas
-routes = api.path('/ip/route')
-for route in routes:
-    dst = route.get('dst-address', '0.0.0.0/0')
-    gw = route.get('gateway', 'connected')
-    print(f"{dst} via {gw}")`,
-  },
-
-  routes_add: {
-    titulo: 'Adicionar Rota Estática',
-    descricao: 'Criar uma nova rota estática',
-    codigo: `# Adicionar rota estática
-routes = api.path('/ip/route')
-routes.add(
-    dst_address='10.10.0.0/16',
-    gateway='192.168.88.254',
-    distance=1,
-    comment='Rota para filial'
-)`,
-  },
-
-  // Wireless
-  wireless_clients: {
-    titulo: 'Listar Clientes Wireless',
-    descricao: 'Obter informações dos clientes conectados via wireless',
-    codigo: `# Listar clientes wireless
-registrations = api.path('/interface/wireless/registration-table')
-for client in registrations:
-    mac = client.get('mac-address')
-    signal = client.get('signal-strength')
-    uptime = client.get('uptime')
-    print(f"MAC: {mac} - Sinal: {signal} - Uptime: {uptime}")`,
-  },
-
-  // OSPF
-  ospf_neighbors: {
-    titulo: 'Listar Vizinhos OSPF',
-    descricao: 'Obter lista de vizinhos OSPF',
-    codigo: `# Listar vizinhos OSPF
-neighbors = api.path('/routing/ospf/neighbor')
-for n in neighbors:
-    print(f"Router ID: {n.get('router-id')} - State: {n.get('state')} - Address: {n.get('address')}")`,
-  },
-
-  ospf_networks: {
-    titulo: 'Configurar Redes OSPF',
-    descricao: 'Adicionar redes ao OSPF',
-    codigo: `# Adicionar rede OSPF
-networks = api.path('/routing/ospf/network')
-networks.add(
-    network='10.0.0.0/24',
-    area='backbone'
-)`,
-  },
-
-  // BGP
-  bgp_peers: {
-    titulo: 'Gerenciar Peers BGP',
-    descricao: 'Listar e configurar peers BGP',
-    codigo: `# Listar peers BGP
-peers = api.path('/routing/bgp/peer')
-for peer in peers:
-    print(f"Name: {peer.get('name')} - Remote AS: {peer.get('remote-as')} - State: {peer.get('state')}")
-
-# Adicionar peer BGP
-peers.add(
-    name='ISP1',
-    remote_address='200.200.200.1',
-    remote_as=65001,
-    local_address='200.200.200.2'
-)`,
-  },
-
-  // Queues
-  queue_simple: {
-    titulo: 'Gerenciar Simple Queues',
-    descricao: 'Criar e listar regras de controle de banda',
-    codigo: `# Listar queues
-queues = api.path('/queue/simple')
-for q in queues:
-    print(f"{q.get('name')}: Max={q.get('max-limit')}")
-
-# Criar queue para limitar cliente
-queues.add(
-    name='cliente-joao',
-    target='192.168.88.100/32',
-    max_limit='10M/10M',
-    comment='Plano 10 Mbps'
-)`,
-  },
-
-  // Hotspot
-  hotspot_users: {
-    titulo: 'Gerenciar Usuários Hotspot',
-    descricao: 'Criar e listar usuários do Hotspot',
-    codigo: `# Listar usuários hotspot
-users = api.path('/ip/hotspot/user')
-for user in users:
-    print(f"User: {user.get('name')} - Profile: {user.get('profile')}")
-
-# Criar usuário
-users.add(
-    name='guest001',
-    password='senha123',
-    profile='default',
-    limit_uptime='1d'
-)`,
-  },
-
-  hotspot_active: {
-    titulo: 'Listar Sessões Ativas',
-    descricao: 'Obter usuários conectados no Hotspot',
-    codigo: `# Listar sessões ativas
-active = api.path('/ip/hotspot/active')
-for session in active:
-    print(f"User: {session.get('user')} - IP: {session.get('address')} - Uptime: {session.get('uptime')}")`,
-  },
-
-  // VPN / IPsec
-  ipsec_peers: {
-    titulo: 'Gerenciar IPsec Peers',
-    descricao: 'Configurar túneis IPsec',
-    codigo: `# Listar peers IPsec
-peers = api.path('/ip/ipsec/peer')
-for peer in peers:
-    print(f"Address: {peer.get('address')} - State: {peer.get('state')}")
-
-# Adicionar peer
-peers.add(
-    address='vpn.empresa.com',
-    secret='chave_compartilhada_123',
-    exchange_mode='ike2'
-)`,
-  },
-
-  // MPLS
-  mpls_ldp: {
-    titulo: 'Configurar MPLS/LDP',
-    descricao: 'Gerenciar MPLS Label Distribution Protocol',
-    codigo: `# Listar interfaces LDP
-ldp_interfaces = api.path('/mpls/ldp/interface')
-for iface in ldp_interfaces:
-    print(f"Interface: {iface.get('interface')}")
-
-# Listar neighbors LDP
-neighbors = api.path('/mpls/ldp/neighbor')
-for n in neighbors:
-    print(f"Transport: {n.get('transport')} - LSR-ID: {n.get('lsr-id')}")`,
-  },
-
-  // VLANs
-  vlan_list: {
-    titulo: 'Gerenciar VLANs',
-    descricao: 'Criar e listar VLANs',
-    codigo: `# Listar VLANs
-vlans = api.path('/interface/vlan')
-for vlan in vlans:
-    print(f"Name: {vlan.get('name')} - VLAN ID: {vlan.get('vlan-id')} - Interface: {vlan.get('interface')}")
-
-# Criar VLAN
-vlans.add(
-    name='vlan100-vendas',
-    vlan_id=100,
-    interface='bridge1'
-)`,
+print("Firewall configurado!")`,
   },
 
   // System
   system_resource: {
     titulo: 'Informações do Sistema',
-    descricao: 'Obter recursos e informações do sistema',
-    codigo: `# Obter informações do sistema
-resource = api.path('/system/resource')
-info = list(resource)[0]
-print(f"Versão: {info.get('version')}")
-print(f"Uptime: {info.get('uptime')}")
-print(f"CPU Load: {info.get('cpu-load')}%")
-print(f"Free Memory: {info.get('free-memory')}")`,
-    saida: `Versão: 7.12.1 (stable)
-Uptime: 15d 04:32:18
-CPU Load: 12%
-Free Memory: 256000000`,
+    descricao: 'Obter recursos e versão do sistema',
+    codigo: `# Versão do Proxmox
+version = proxmox.version.get()
+print(f"Proxmox VE: {version['version']}")
+print(f"Release: {version['release']}")
+
+# Status dos nós
+for node in proxmox.nodes.get():
+    if node['status'] == 'online':
+        node_name = node['node']
+        status = proxmox.nodes(node_name).status.get()
+        
+        print(f"\\nNode: {node_name}")
+        print(f"  CPU: {status['cpu']*100:.1f}%")
+        print(f"  Memória: {status['memory']['used']/1024/1024/1024:.1f}GB / {status['memory']['total']/1024/1024/1024:.1f}GB")
+        print(f"  Uptime: {status['uptime']//3600}h {(status['uptime']%3600)//60}m")
+        print(f"  Kernel: {status.get('kversion', 'N/A')}")`,
+    saida: `Proxmox VE: 8.1.3
+Release: 8.1
+
+Node: pve1
+  CPU: 12.5%
+  Memória: 24.3GB / 64.0GB
+  Uptime: 720h 30m
+  Kernel: 6.5.11-7-pve`,
   },
 
-  system_backup: {
-    titulo: 'Backup e Restore',
-    descricao: 'Criar e restaurar backups via API',
-    codigo: `# Criar backup
-backup = api.path('/system/backup')
-backup('save', name='backup-api')
+  // HA
+  ha_resources: {
+    titulo: 'Recursos HA',
+    descricao: 'Gerenciar High Availability',
+    codigo: `# Listar recursos HA
+print("Recursos HA:")
+for resource in proxmox.cluster.ha.resources.get():
+    print(f"  {resource['sid']}")
+    print(f"    Estado: {resource.get('state', 'unknown')}")
+    print(f"    Grupo: {resource.get('group', 'N/A')}")
 
-# Listar backups disponíveis
-files = api.path('/file')
-for f in files:
-    if f.get('name', '').endswith('.backup'):
-        print(f"Backup: {f.get('name')} - Size: {f.get('size')}")`,
+# Adicionar VM ao HA
+proxmox.cluster.ha.resources.create(
+    sid='vm:100',
+    group='ha-group-1',
+    state='started',
+    max_restart=3,
+    max_relocate=1
+)
+
+print("VM adicionada ao HA!")
+
+# Status do HA Manager
+status = proxmox.cluster.ha.status.current.get()
+for item in status:
+    print(f"Node: {item.get('node', 'N/A')} - {item.get('status', 'N/A')}")`,
   },
 
-  // CAPsMAN
-  capsman_caps: {
-    titulo: 'Gerenciar CAPs (CAPsMAN)',
-    descricao: 'Listar e gerenciar APs controlados',
-    codigo: `# Listar CAPs registrados
-caps = api.path('/caps-man/remote-cap')
-for cap in caps:
-    print(f"Name: {cap.get('name')} - Address: {cap.get('address')} - State: {cap.get('state')}")
+  // Métricas
+  metrics: {
+    titulo: 'Coletar Métricas',
+    descricao: 'Obter métricas de performance para monitoramento',
+    codigo: `import time
 
-# Listar interfaces provisionadas
-interfaces = api.path('/caps-man/interface')
-for iface in interfaces:
-    print(f"Name: {iface.get('name')} - Master: {iface.get('master-interface')}")`,
+node = 'pve1'
+vmid = 100
+
+# Métricas da VM
+def get_vm_metrics(node, vmid):
+    current = proxmox.nodes(node).qemu(vmid).status.current.get()
+    return {
+        'cpu': current.get('cpu', 0) * 100,
+        'mem': current.get('mem', 0) / 1024 / 1024,
+        'maxmem': current.get('maxmem', 0) / 1024 / 1024,
+        'disk_read': current.get('diskread', 0),
+        'disk_write': current.get('diskwrite', 0),
+        'net_in': current.get('netin', 0),
+        'net_out': current.get('netout', 0)
+    }
+
+# Coletar métricas
+metrics = get_vm_metrics(node, vmid)
+print(f"VM {vmid} Métricas:")
+print(f"  CPU: {metrics['cpu']:.1f}%")
+print(f"  Memória: {metrics['mem']:.0f}MB / {metrics['maxmem']:.0f}MB")
+print(f"  Disco R/W: {metrics['disk_read']/1024/1024:.1f}MB / {metrics['disk_write']/1024/1024:.1f}MB")
+print(f"  Rede IN/OUT: {metrics['net_in']/1024/1024:.1f}MB / {metrics['net_out']/1024/1024:.1f}MB")`,
+    saida: `VM 100 Métricas:
+  CPU: 5.2%
+  Memória: 1024MB / 4096MB
+  Disco R/W: 150.3MB / 45.2MB
+  Rede IN/OUT: 25.1MB / 12.4MB`,
   },
 
-  // IPv6
-  ipv6_address: {
-    titulo: 'Gerenciar IPv6',
-    descricao: 'Configurar endereços IPv6',
-    codigo: `# Listar endereços IPv6
-addresses = api.path('/ipv6/address')
-for addr in addresses:
-    print(f"{addr.get('address')} em {addr.get('interface')}")
+  // Migrações
+  migration: {
+    titulo: 'Migrar VM',
+    descricao: 'Migrar VM entre nós do cluster',
+    codigo: `source_node = 'pve1'
+target_node = 'pve2'
+vmid = 100
 
-# Adicionar endereço IPv6
-addresses.add(
-    address='2001:db8::1/64',
-    interface='ether1',
-    advertise=True
-)`,
-  },
+# Verificar se VM pode ser migrada
+vm_config = proxmox.nodes(source_node).qemu(vmid).config.get()
+print(f"Migrando VM {vmid}: {vm_config.get('name', 'N/A')}")
 
-  // User Manager
-  usermanager_users: {
-    titulo: 'Gerenciar User Manager',
-    descricao: 'Administrar usuários do User Manager (RADIUS)',
-    codigo: `# Listar usuários do User Manager
-users = api.path('/user-manager/user')
-for user in users:
-    print(f"User: {user.get('name')} - Group: {user.get('group')}")
+# Live migration (VM rodando)
+task = proxmox.nodes(source_node).qemu(vmid).migrate.create(
+    target=target_node,
+    online=True,  # True = live migration
+    with_local_disks=True  # Se tiver discos locais
+)
 
-# Criar usuário
-users.add(
-    name='cliente001',
-    password='senha123',
-    group='default'
-)`,
-  },
+print(f"Migração iniciada - Task: {task}")
 
-  // Logs
-  log_read: {
-    titulo: 'Ler Logs do Sistema',
-    descricao: 'Obter logs do RouterOS',
-    codigo: `# Ler últimos logs
-logs = api.path('/log')
-for log in list(logs)[-20:]:  # Últimas 20 entradas
-    print(f"[{log.get('time')}] {log.get('topics')}: {log.get('message')}")`,
-  },
-
-  // Scripts
-  script_run: {
-    titulo: 'Executar Scripts',
-    descricao: 'Executar scripts armazenados',
-    codigo: `# Listar scripts
-scripts = api.path('/system/script')
-for script in scripts:
-    print(f"Script: {script.get('name')}")
-
-# Executar script
-scripts('run', **{'.id': '*1'})  # Executa script por ID
-
-# Criar e executar script inline
-scripts.add(
-    name='backup-diario',
-    source='/system backup save name=daily-backup'
-)`,
+# Aguardar migração (opcional)
+import time
+while True:
+    status = proxmox.nodes(source_node).tasks(task).status.get()
+    if status['status'] == 'stopped':
+        print(f"Migração concluída: {status.get('exitstatus', 'OK')}")
+        break
+    print("Migrando...")
+    time.sleep(5)`,
   },
 };
 
 // Função para obter exemplo por comando
 export function getPythonExampleForCommand(comando: string): typeof PYTHON_API_EXAMPLES[keyof typeof PYTHON_API_EXAMPLES] | null {
   const commandMappings: Record<string, keyof typeof PYTHON_API_EXAMPLES> = {
-    '/ip dhcp-server lease': 'dhcp_leases',
-    '/ip dhcp-server': 'dhcp_leases',
-    '/ip firewall filter': 'firewall_rules',
-    '/ip firewall': 'firewall_rules',
-    '/interface': 'interfaces_list',
-    '/ip address': 'ip_addresses',
-    '/ip route': 'routes_list',
-    '/interface wireless': 'wireless_clients',
-    '/routing ospf': 'ospf_neighbors',
-    '/routing bgp': 'bgp_peers',
-    '/queue simple': 'queue_simple',
-    '/ip hotspot user': 'hotspot_users',
-    '/ip hotspot active': 'hotspot_active',
-    '/ip ipsec': 'ipsec_peers',
-    '/mpls': 'mpls_ldp',
-    '/interface vlan': 'vlan_list',
-    '/system resource': 'system_resource',
-    '/system backup': 'system_backup',
-    '/caps-man': 'capsman_caps',
-    '/ipv6': 'ipv6_address',
-    '/user-manager': 'usermanager_users',
-    '/log': 'log_read',
-    '/system script': 'script_run',
+    'qm': 'vm_list',
+    'qm create': 'vm_create',
+    'qm start': 'vm_start_stop',
+    'qm stop': 'vm_start_stop',
+    'qm snapshot': 'vm_snapshot',
+    'qm clone': 'vm_clone',
+    'pct': 'ct_list',
+    'pct create': 'ct_create',
+    'pvesm': 'storage_list',
+    'vzdump': 'backup_create',
+    'qmrestore': 'backup_restore',
+    'pvecm': 'cluster_status',
+    'ha': 'ha_resources',
+    'firewall': 'firewall_rules',
+    'migrate': 'migration',
   };
 
   for (const [prefix, key] of Object.entries(commandMappings)) {

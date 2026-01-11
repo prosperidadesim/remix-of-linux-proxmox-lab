@@ -91,7 +91,7 @@ export default function Scripts() {
             Scripts de Configuração
           </h1>
           <p className="text-muted-foreground">
-            Exemplos prontos de configuração para equipamentos MikroTik
+            Exemplos prontos de configuração para Proxmox VE e Linux
           </p>
         </div>
 

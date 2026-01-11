@@ -19,890 +19,880 @@ export interface Script {
 }
 
 export const SCRIPT_CATEGORIES: ScriptCategory[] = [
-  { id: 'switch', nome: 'Switches', descricao: 'Configurações para switches CRS e CSS', icone: 'Network' },
-  { id: 'router', nome: 'Routers', descricao: 'Configurações para roteadores RB e CCR', icone: 'Router' },
-  { id: 'wireless', nome: 'Wireless', descricao: 'Configurações para APs e bridges wireless', icone: 'Wifi' },
-  { id: 'firewall', nome: 'Firewall', descricao: 'Regras de firewall e segurança', icone: 'Shield' },
-  { id: 'vpn', nome: 'VPN', descricao: 'Túneis VPN e conexões seguras', icone: 'Lock' },
-  { id: 'qos', nome: 'QoS', descricao: 'Controle de banda e priorização', icone: 'Gauge' },
-  { id: 'hotspot', nome: 'Hotspot', descricao: 'Configurações de hotspot e captive portal', icone: 'Users' },
-  { id: 'backup', nome: 'Backup & Tools', descricao: 'Scripts de backup e ferramentas', icone: 'Save' },
+  { id: 'vm', nome: 'VMs', descricao: 'Gerenciamento de máquinas virtuais KVM', icone: 'Monitor' },
+  { id: 'container', nome: 'Containers', descricao: 'Gerenciamento de containers LXC', icone: 'Box' },
+  { id: 'storage', nome: 'Storage', descricao: 'Configuração de armazenamento e ZFS', icone: 'HardDrive' },
+  { id: 'network', nome: 'Rede', descricao: 'Configuração de bridges, VLANs e bonding', icone: 'Network' },
+  { id: 'backup', nome: 'Backup', descricao: 'Scripts de backup e restore', icone: 'Save' },
+  { id: 'cluster', nome: 'Cluster', descricao: 'Alta disponibilidade e clustering', icone: 'Server' },
+  { id: 'monitor', nome: 'Monitoramento', descricao: 'Scripts de monitoramento e alertas', icone: 'Activity' },
+  { id: 'automation', nome: 'Automação', descricao: 'Scripts de automação e manutenção', icone: 'Cog' },
 ];
 
 export const SCRIPTS: Script[] = [
-  // ============ SWITCHES ============
+  // ============ VMs ============
   {
-    id: 'crs326-basic',
-    titulo: 'CRS-326-24G-2S+ - Configuração Básica',
-    descricao: 'Configuração inicial completa do switch CRS-326-24G-2S+ com VLANs, gerenciamento e SFP+',
-    equipamento: 'CRS-326-24G-2S+',
-    categoria: 'switch',
-    tags: ['CRS', 'VLAN', 'SFP+', 'Layer2'],
-    codigo: `# ==========================================
-# CRS-326-24G-2S+ - Configuração Básica
+    id: 'vm-create-basic',
+    titulo: 'Criar VM Básica',
+    descricao: 'Script para criar uma VM com configurações padrão otimizadas',
+    equipamento: 'Proxmox VE',
+    categoria: 'vm',
+    tags: ['qm', 'VM', 'KVM', 'criar'],
+    codigo: `#!/bin/bash
 # ==========================================
-# Reset para configuração limpa
-/system reset-configuration no-defaults=yes skip-backup=yes
-
-# Aguarde o reboot e conecte via MAC-Telnet ou cabo serial
-
+# Criar VM com configurações otimizadas
 # ==========================================
-# 1. CONFIGURAÇÃO DE IDENTIDADE E ACESSO
-# ==========================================
-/system identity set name="SW-CORE-01"
 
-# Criar usuário admin seguro
-/user add name=admin-rede password="SenhaSegura@2024" group=full
-/user disable admin
+VMID=\${1:-100}
+NAME=\${2:-"vm-linux"}
+MEMORY=\${3:-2048}
+CORES=\${4:-2}
+STORAGE=\${5:-"local-lvm"}
+ISO=\${6:-"local:iso/ubuntu-22.04.iso"}
 
-# ==========================================
-# 2. CONFIGURAÇÃO DE GERENCIAMENTO
-# ==========================================
-# Interface de gerenciamento
-/interface vlan add name=VLAN-MGMT vlan-id=100 interface=bridge
+# Criar a VM
+qm create $VMID \\
+  --name $NAME \\
+  --memory $MEMORY \\
+  --cores $CORES \\
+  --cpu host \\
+  --net0 virtio,bridge=vmbr0 \\
+  --scsihw virtio-scsi-single \\
+  --scsi0 $STORAGE:32,iothread=1,discard=on \\
+  --ide2 $ISO,media=cdrom \\
+  --boot order=scsi0\\;ide2 \\
+  --ostype l26 \\
+  --agent enabled=1
 
-/ip address add address=192.168.100.2/24 interface=VLAN-MGMT
+echo "VM $VMID ($NAME) criada com sucesso!"
+echo "Para iniciar: qm start $VMID"`,
+    explicacao: `Este script cria uma VM otimizada com:
 
-# Gateway e DNS
-/ip route add dst-address=0.0.0.0/0 gateway=192.168.100.1
-/ip dns set servers=8.8.8.8,8.8.4.4
+**Configurações:**
+- CPU tipo host para máximo desempenho
+- Rede VirtIO para melhor throughput
+- Disco SCSI com VirtIO e iothread
+- Discard habilitado para TRIM/unmap
+- QEMU Guest Agent habilitado
 
-# ==========================================
-# 3. CONFIGURAÇÃO DA BRIDGE (Switch Chip)
-# ==========================================
-/interface bridge add name=bridge vlan-filtering=no
-
-# Adicionar todas as portas à bridge
-/interface bridge port
-add bridge=bridge interface=ether1
-add bridge=bridge interface=ether2
-add bridge=bridge interface=ether3
-add bridge=bridge interface=ether4
-add bridge=bridge interface=ether5
-add bridge=bridge interface=ether6
-add bridge=bridge interface=ether7
-add bridge=bridge interface=ether8
-add bridge=bridge interface=ether9
-add bridge=bridge interface=ether10
-add bridge=bridge interface=ether11
-add bridge=bridge interface=ether12
-add bridge=bridge interface=ether13
-add bridge=bridge interface=ether14
-add bridge=bridge interface=ether15
-add bridge=bridge interface=ether16
-add bridge=bridge interface=ether17
-add bridge=bridge interface=ether18
-add bridge=bridge interface=ether19
-add bridge=bridge interface=ether20
-add bridge=bridge interface=ether21
-add bridge=bridge interface=ether22
-add bridge=bridge interface=ether23
-add bridge=bridge interface=ether24
-add bridge=bridge interface=sfp-sfpplus1
-add bridge=bridge interface=sfp-sfpplus2
-
-# ==========================================
-# 4. CONFIGURAÇÃO DE VLANs
-# ==========================================
-# Criar VLANs
-/interface bridge vlan
-add bridge=bridge tagged=bridge,sfp-sfpplus1,sfp-sfpplus2 vlan-ids=100 comment="MGMT"
-add bridge=bridge tagged=bridge,sfp-sfpplus1,sfp-sfpplus2 vlan-ids=10 comment="SERVIDORES"
-add bridge=bridge tagged=bridge,sfp-sfpplus1,sfp-sfpplus2 vlan-ids=20 comment="USUARIOS"
-add bridge=bridge tagged=bridge,sfp-sfpplus1,sfp-sfpplus2 vlan-ids=30 comment="VOIP"
-add bridge=bridge tagged=bridge,sfp-sfpplus1,sfp-sfpplus2 vlan-ids=40 comment="WIFI"
-add bridge=bridge tagged=bridge,sfp-sfpplus1,sfp-sfpplus2 vlan-ids=99 comment="NATIVE"
-
-# ==========================================
-# 5. ATRIBUIR VLANs ÀS PORTAS
-# ==========================================
-# Portas 1-6: Servidores (VLAN 10)
-/interface bridge port
-set [find interface=ether1] pvid=10 frame-types=admit-only-untagged-and-priority-tagged
-set [find interface=ether2] pvid=10 frame-types=admit-only-untagged-and-priority-tagged
-set [find interface=ether3] pvid=10 frame-types=admit-only-untagged-and-priority-tagged
-set [find interface=ether4] pvid=10 frame-types=admit-only-untagged-and-priority-tagged
-set [find interface=ether5] pvid=10 frame-types=admit-only-untagged-and-priority-tagged
-set [find interface=ether6] pvid=10 frame-types=admit-only-untagged-and-priority-tagged
-
-# Portas 7-18: Usuários (VLAN 20)
-set [find interface=ether7] pvid=20 frame-types=admit-only-untagged-and-priority-tagged
-set [find interface=ether8] pvid=20 frame-types=admit-only-untagged-and-priority-tagged
-set [find interface=ether9] pvid=20 frame-types=admit-only-untagged-and-priority-tagged
-set [find interface=ether10] pvid=20 frame-types=admit-only-untagged-and-priority-tagged
-set [find interface=ether11] pvid=20 frame-types=admit-only-untagged-and-priority-tagged
-set [find interface=ether12] pvid=20 frame-types=admit-only-untagged-and-priority-tagged
-set [find interface=ether13] pvid=20 frame-types=admit-only-untagged-and-priority-tagged
-set [find interface=ether14] pvid=20 frame-types=admit-only-untagged-and-priority-tagged
-set [find interface=ether15] pvid=20 frame-types=admit-only-untagged-and-priority-tagged
-set [find interface=ether16] pvid=20 frame-types=admit-only-untagged-and-priority-tagged
-set [find interface=ether17] pvid=20 frame-types=admit-only-untagged-and-priority-tagged
-set [find interface=ether18] pvid=20 frame-types=admit-only-untagged-and-priority-tagged
-
-# Portas 19-22: VoIP (VLAN 30)
-set [find interface=ether19] pvid=30 frame-types=admit-only-untagged-and-priority-tagged
-set [find interface=ether20] pvid=30 frame-types=admit-only-untagged-and-priority-tagged
-set [find interface=ether21] pvid=30 frame-types=admit-only-untagged-and-priority-tagged
-set [find interface=ether22] pvid=30 frame-types=admit-only-untagged-and-priority-tagged
-
-# Portas 23-24: WiFi APs (VLAN 40)
-set [find interface=ether23] pvid=40 frame-types=admit-only-untagged-and-priority-tagged
-set [find interface=ether24] pvid=40 frame-types=admit-only-untagged-and-priority-tagged
-
-# SFP+ como trunk (tagged todas VLANs)
-set [find interface=sfp-sfpplus1] frame-types=admit-only-vlan-tagged
-set [find interface=sfp-sfpplus2] frame-types=admit-only-vlan-tagged
-
-# Adicionar VLANs untagged às portas
-/interface bridge vlan
-set [find vlan-ids=10] untagged=ether1,ether2,ether3,ether4,ether5,ether6
-set [find vlan-ids=20] untagged=ether7,ether8,ether9,ether10,ether11,ether12,ether13,ether14,ether15,ether16,ether17,ether18
-set [find vlan-ids=30] untagged=ether19,ether20,ether21,ether22
-set [find vlan-ids=40] untagged=ether23,ether24
-
-# ==========================================
-# 6. ATIVAR VLAN FILTERING
-# ==========================================
-/interface bridge set bridge vlan-filtering=yes
-
-# ==========================================
-# 7. CONFIGURAÇÕES DE SEGURANÇA
-# ==========================================
-# Desabilitar serviços desnecessários
-/ip service
-set telnet disabled=yes
-set ftp disabled=yes
-set www disabled=no port=8080
-set ssh port=2222
-set api disabled=yes
-set api-ssl disabled=yes
-set winbox disabled=no
-
-# Limitar acesso ao Winbox
-/ip firewall filter
-add chain=input action=accept protocol=tcp dst-port=8291 src-address=192.168.100.0/24 comment="Winbox - MGMT only"
-add chain=input action=drop protocol=tcp dst-port=8291 comment="Block Winbox from other networks"
-
-# ==========================================
-# 8. SPANNING TREE (RSTP)
-# ==========================================
-/interface bridge set bridge protocol-mode=rstp priority=0x4000
-
-# Configurar portas edge (dispositivos finais)
-/interface bridge port
-set [find interface=ether1] edge=yes point-to-point=yes
-set [find interface=ether2] edge=yes point-to-point=yes
-# ... repetir para portas de acesso
-
-# Portas SFP+ como uplinks
-set [find interface=sfp-sfpplus1] edge=no point-to-point=yes
-set [find interface=sfp-sfpplus2] edge=no point-to-point=yes
-
-# ==========================================
-# 9. SNMP (Monitoramento)
-# ==========================================
-/snmp set enabled=yes contact="admin@empresa.com" location="Rack 01 - Sala TI"
-/snmp community set [find default=yes] name=MinhaCommunity read-access=yes write-access=no
-
-# ==========================================
-# 10. NTP e LOG
-# ==========================================
-/system ntp client set enabled=yes
-/system ntp client servers add address=a.ntp.br
-/system ntp client servers add address=b.ntp.br
-
-/system logging action set remote target=remote remote=192.168.100.10
-
-# ==========================================
-# 11. BACKUP AUTOMÁTICO
-# ==========================================
-/system scheduler add name=backup-diario interval=1d start-time=02:00:00 \\
-  on-event="/system backup save name=([/system identity get name] . \\"-\\" . [:pick [/system clock get date] 0 11])"
-
-# Exibir configuração final
-/interface bridge vlan print
-/interface bridge port print`,
-    explicacao: `Este script configura completamente o CRS-326-24G-2S+ como switch gerenciável L2 com:
-
-**1. Estrutura de VLANs:**
-- VLAN 10: Servidores (portas 1-6)
-- VLAN 20: Usuários (portas 7-18)
-- VLAN 30: VoIP (portas 19-22)
-- VLAN 40: WiFi (portas 23-24)
-- VLAN 100: Gerenciamento
-- SFP+ 1 e 2: Trunk (todas as VLANs tagged)
-
-**2. Segurança:**
-- Usuário admin personalizado
-- Serviços desnecessários desabilitados
-- Acesso Winbox restrito à VLAN de gerenciamento
-- RSTP para prevenção de loops
-
-**3. Monitoramento:**
-- SNMP configurado
-- Syslog remoto
-- NTP sincronizado
-
-**4. Manutenção:**
-- Backup automático diário`,
+**Parâmetros:**
+1. VMID (padrão: 100)
+2. Nome (padrão: vm-linux)
+3. Memória em MB (padrão: 2048)
+4. Cores (padrão: 2)
+5. Storage (padrão: local-lvm)
+6. ISO (padrão: Ubuntu 22.04)`,
     requisitos: [
-      'RouterOS v7.x ou superior',
-      'Acesso físico ou MAC-Telnet para configuração inicial',
-      'Módulos SFP+ compatíveis para uplinks'
+      'Proxmox VE 7.x ou superior',
+      'ISO disponível no storage',
+      'VMID não utilizado',
     ],
     observacoes: [
-      'Altere as senhas antes de aplicar em produção',
-      'Ajuste os IPs conforme sua rede',
-      'O VLAN filtering só deve ser ativado após configurar todas as VLANs'
-    ]
+      'Ajuste o VMID conforme sua numeração',
+      'Instale o qemu-guest-agent na VM para recursos avançados',
+    ],
   },
   {
-    id: 'crs326-lacp',
-    titulo: 'CRS-326-24G-2S+ - LACP/Bonding',
-    descricao: 'Configuração de Link Aggregation (LACP) nas portas SFP+ para alta disponibilidade',
-    equipamento: 'CRS-326-24G-2S+',
-    categoria: 'switch',
-    tags: ['CRS', 'LACP', 'Bonding', 'HA'],
-    codigo: `# ==========================================
-# CRS-326 - Configuração LACP nos SFP+
+    id: 'vm-clone-template',
+    titulo: 'Clone de Template',
+    descricao: 'Clonar rapidamente VMs a partir de templates',
+    equipamento: 'Proxmox VE',
+    categoria: 'vm',
+    tags: ['qm', 'clone', 'template', 'linked'],
+    codigo: `#!/bin/bash
+# ==========================================
+# Clone de VM a partir de template
 # ==========================================
 
-# Criar interface bonding LACP
-/interface bonding add name=bond-uplink mode=802.3ad \\
-  slaves=sfp-sfpplus1,sfp-sfpplus2 \\
-  transmit-hash-policy=layer-3-and-4 \\
-  lacp-rate=fast \\
-  link-monitoring=mii \\
-  mii-interval=100ms
+TEMPLATE_ID=\${1:-9000}
+NEW_VMID=\${2:-101}
+NEW_NAME=\${3:-"vm-clone"}
+FULL_CLONE=\${4:-0}  # 0=linked, 1=full
 
-# Remover portas SFP+ individuais da bridge
-/interface bridge port remove [find interface=sfp-sfpplus1]
-/interface bridge port remove [find interface=sfp-sfpplus2]
+if [ "$FULL_CLONE" -eq 1 ]; then
+  echo "Criando clone completo..."
+  qm clone $TEMPLATE_ID $NEW_VMID --name $NEW_NAME --full
+else
+  echo "Criando linked clone..."
+  qm clone $TEMPLATE_ID $NEW_VMID --name $NEW_NAME
+fi
 
-# Adicionar bonding à bridge
-/interface bridge port add bridge=bridge interface=bond-uplink \\
-  frame-types=admit-only-vlan-tagged
+# Configurar após clone
+qm set $NEW_VMID --onboot 0
 
-# Configurar VLANs para o bonding
-/interface bridge vlan
-set [find vlan-ids=10] tagged=([get [find vlan-ids=10] tagged],bond-uplink)
-set [find vlan-ids=20] tagged=([get [find vlan-ids=20] tagged],bond-uplink)
-set [find vlan-ids=30] tagged=([get [find vlan-ids=30] tagged],bond-uplink)
-set [find vlan-ids=40] tagged=([get [find vlan-ids=40] tagged],bond-uplink)
-set [find vlan-ids=100] tagged=([get [find vlan-ids=100] tagged],bond-uplink)
+echo "Clone $NEW_VMID ($NEW_NAME) criado!"
+echo "Para personalizar: qm set $NEW_VMID --<opção> <valor>"`,
+    explicacao: `Script para clonar VMs rapidamente.
 
-# Verificar status do bonding
-/interface bonding monitor bond-uplink`,
-    explicacao: `Configura Link Aggregation (802.3ad/LACP) combinando as duas portas SFP+ em um único link lógico de 20Gbps com redundância.
+**Tipos de Clone:**
+- **Linked Clone**: Rápido, ocupa menos espaço, depende do template
+- **Full Clone**: Independente, ocupa mais espaço, pode ser migrado livremente
 
-**Benefícios:**
-- Largura de banda agregada (até 20Gbps)
-- Failover automático se uma porta falhar
-- Balanceamento de carga entre os links
+**Uso recomendado:**
+- Linked clone para ambientes de teste
+- Full clone para produção`,
+    requisitos: ['Template existente convertido com qm template'],
+  },
+  {
+    id: 'vm-bulk-operations',
+    titulo: 'Operações em Lote',
+    descricao: 'Iniciar, parar ou reiniciar múltiplas VMs',
+    equipamento: 'Proxmox VE',
+    categoria: 'vm',
+    tags: ['qm', 'bulk', 'start', 'stop'],
+    codigo: `#!/bin/bash
+# ==========================================
+# Operações em lote de VMs
+# ==========================================
 
-**Hash Policy:**
-- layer-3-and-4: Balanceia baseado em IP e porta (melhor para muitas conexões)`,
+ACTION=\${1:-status}  # start, stop, shutdown, reboot, status
+VMIDS="\${@:2}"       # Lista de VMIDs ou 'all'
+
+if [ -z "$VMIDS" ] || [ "$VMIDS" = "all" ]; then
+  VMIDS=$(qm list | awk 'NR>1 {print $1}')
+fi
+
+for VMID in $VMIDS; do
+  case $ACTION in
+    start)
+      echo "Iniciando VM $VMID..."
+      qm start $VMID
+      ;;
+    stop)
+      echo "Parando VM $VMID (forçado)..."
+      qm stop $VMID
+      ;;
+    shutdown)
+      echo "Desligando VM $VMID (graceful)..."
+      qm shutdown $VMID
+      ;;
+    reboot)
+      echo "Reiniciando VM $VMID..."
+      qm reboot $VMID
+      ;;
+    status)
+      qm status $VMID
+      ;;
+    *)
+      echo "Ação inválida: $ACTION"
+      echo "Uso: $0 <start|stop|shutdown|reboot|status> [vmids ou 'all']"
+      exit 1
+      ;;
+  esac
+done`,
+    explicacao: `Script para operações em massa em VMs.
+
+**Ações disponíveis:**
+- start: Inicia as VMs
+- stop: Para imediatamente (forçado)
+- shutdown: Desliga graciosamente via ACPI
+- reboot: Reinicia as VMs
+- status: Mostra status atual
+
+**Exemplos:**
+- \`./script.sh start 100 101 102\`
+- \`./script.sh shutdown all\``,
+  },
+
+  // ============ CONTAINERS ============
+  {
+    id: 'ct-create-basic',
+    titulo: 'Criar Container LXC',
+    descricao: 'Script para criar container com configurações otimizadas',
+    equipamento: 'Proxmox VE',
+    categoria: 'container',
+    tags: ['pct', 'LXC', 'container', 'criar'],
+    codigo: `#!/bin/bash
+# ==========================================
+# Criar Container LXC
+# ==========================================
+
+CTID=\${1:-200}
+NAME=\${2:-"ct-ubuntu"}
+TEMPLATE=\${3:-"local:vztmpl/ubuntu-22.04-standard_22.04-1_amd64.tar.zst"}
+STORAGE=\${4:-"local-lvm"}
+MEMORY=\${5:-512}
+CORES=\${6:-1}
+DISK=\${7:-8}
+PASSWORD=\${8:-"changeme"}
+
+pct create $CTID $TEMPLATE \\
+  --hostname $NAME \\
+  --storage $STORAGE \\
+  --rootfs $STORAGE:$DISK \\
+  --memory $MEMORY \\
+  --cores $CORES \\
+  --net0 name=eth0,bridge=vmbr0,ip=dhcp \\
+  --password $PASSWORD \\
+  --unprivileged 1 \\
+  --features nesting=1 \\
+  --onboot 0 \\
+  --start 0
+
+echo "Container $CTID ($NAME) criado!"
+echo "Para iniciar: pct start $CTID"
+echo "Para acessar: pct enter $CTID"`,
+    explicacao: `Cria container LXC com boas práticas:
+
+**Configurações:**
+- Modo unprivileged (mais seguro)
+- Nesting habilitado (permite Docker)
+- DHCP para rede
+- Não inicia automaticamente
+
+**Parâmetros:**
+1. CTID
+2. Hostname
+3. Template
+4. Storage
+5. Memória (MB)
+6. Cores
+7. Disco (GB)
+8. Senha root`,
+    requisitos: ['Template baixado via pveam'],
+  },
+  {
+    id: 'ct-docker-ready',
+    titulo: 'Container Docker-Ready',
+    descricao: 'Container LXC configurado para rodar Docker',
+    equipamento: 'Proxmox VE',
+    categoria: 'container',
+    tags: ['pct', 'LXC', 'Docker', 'nesting'],
+    codigo: `#!/bin/bash
+# ==========================================
+# Container LXC pronto para Docker
+# ==========================================
+
+CTID=\${1:-201}
+NAME=\${2:-"docker-host"}
+TEMPLATE="local:vztmpl/debian-12-standard_12.2-1_amd64.tar.zst"
+
+# Criar container com features necessárias
+pct create $CTID $TEMPLATE \\
+  --hostname $NAME \\
+  --storage local-lvm \\
+  --rootfs local-lvm:16 \\
+  --memory 2048 \\
+  --cores 2 \\
+  --net0 name=eth0,bridge=vmbr0,ip=dhcp \\
+  --unprivileged 1 \\
+  --features keyctl=1,nesting=1 \\
+  --onboot 1
+
+# Iniciar container
+pct start $CTID
+
+# Aguardar inicialização
+sleep 5
+
+# Instalar Docker dentro do container
+pct exec $CTID -- bash -c '
+apt-get update
+apt-get install -y ca-certificates curl gnupg
+install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+chmod a+r /etc/apt/keyrings/docker.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+apt-get update
+apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+'
+
+echo "Container Docker-ready criado!"
+echo "Acesse: pct enter $CTID"
+echo "Teste: docker run hello-world"`,
+    explicacao: `Container otimizado para Docker:
+
+**Features habilitadas:**
+- keyctl: Necessário para alguns containers
+- nesting: Permite containers dentro do LXC
+
+**Instalação automática:**
+- Docker CE
+- Docker Compose plugin
+- Docker Buildx
+
+**Segurança:**
+- Modo unprivileged
+- Isolamento mantido`,
     requisitos: [
-      'Switch/Router do outro lado deve suportar LACP',
-      'Cabos SFP+ de mesma velocidade'
-    ]
-  },
-  {
-    id: 'crs326-port-isolation',
-    titulo: 'CRS-326-24G-2S+ - Port Isolation (PVLAN)',
-    descricao: 'Isolamento de portas para evitar comunicação entre clientes na mesma VLAN',
-    equipamento: 'CRS-326-24G-2S+',
-    categoria: 'switch',
-    tags: ['CRS', 'PVLAN', 'Isolation', 'Security'],
-    codigo: `# ==========================================
-# CRS-326 - Port Isolation (Private VLAN)
-# ==========================================
-# Útil para redes de clientes onde cada porta
-# só deve se comunicar com o gateway/uplink
-
-# Criar horizonte de isolamento
-/interface bridge port
-set [find interface=ether7] horizon=1
-set [find interface=ether8] horizon=1
-set [find interface=ether9] horizon=1
-set [find interface=ether10] horizon=1
-set [find interface=ether11] horizon=1
-set [find interface=ether12] horizon=1
-set [find interface=ether13] horizon=1
-set [find interface=ether14] horizon=1
-set [find interface=ether15] horizon=1
-set [find interface=ether16] horizon=1
-set [find interface=ether17] horizon=1
-set [find interface=ether18] horizon=1
-
-# Uplinks sem isolamento (horizon=none ou diferente)
-set [find interface=sfp-sfpplus1] horizon=none
-set [find interface=sfp-sfpplus2] horizon=none
-
-# Verificar configuração
-/interface bridge port print`,
-    explicacao: `Port Isolation impede que dispositivos no mesmo horizonte se comuniquem diretamente.
-
-**Casos de uso:**
-- ISPs: Clientes não podem ver tráfego de outros clientes
-- Hotéis/Hotspots: Isolamento entre quartos/usuários
-- Escritórios: Isolamento entre departamentos
-
-**Como funciona:**
-- Portas com mesmo horizon number não trocam tráfego entre si
-- Portas com horizon=none podem se comunicar com todas`
-  },
-  {
-    id: 'crs326-storm-control',
-    titulo: 'CRS-326-24G-2S+ - Storm Control',
-    descricao: 'Proteção contra broadcast/multicast storm limitando tráfego por porta',
-    equipamento: 'CRS-326-24G-2S+',
-    categoria: 'switch',
-    tags: ['CRS', 'Storm', 'Broadcast', 'Protection'],
-    codigo: `# ==========================================
-# CRS-326 - Storm Control
-# ==========================================
-
-# Limitar broadcast, multicast e unknown unicast
-# Valores em porcentagem da capacidade da porta
-
-/interface ethernet
-set ether1 bandwidth=1Gbps
-set ether2 bandwidth=1Gbps
-# ... para todas as portas de acesso
-
-# Configurar limites de storm por porta usando switch rules
-/interface ethernet switch rule
-add switch=switch1 ports=ether1-ether24 \\
-  rate=10M \\
-  dst-mac-type=broadcast \\
-  new-dst-ports="" \\
-  copy-to-cpu=no \\
-  comment="Broadcast limit 10Mbps"
-
-add switch=switch1 ports=ether1-ether24 \\
-  rate=5M \\
-  dst-mac-type=multicast \\
-  new-dst-ports="" \\
-  copy-to-cpu=no \\
-  comment="Multicast limit 5Mbps"
-
-# Alternativa usando bridge filter (RouterOS 7)
-/interface bridge filter
-add chain=forward action=set-priority new-priority=1 \\
-  mac-protocol=arp passthrough=yes
-add chain=forward action=drop \\
-  mac-protocol=arp arp-opcode=request \\
-  limit=10,5:packet \\
-  comment="ARP rate limit"`,
-    explicacao: `Storm Control previne que loops ou dispositivos malconfigurados derrubem a rede com excesso de broadcast/multicast.
-
-**Limites recomendados:**
-- Broadcast: 5-10% da capacidade da porta
-- Multicast: 2-5%
-- Unknown unicast: 5%`
+      'Template Debian 12 disponível',
+      'Conexão com internet',
+    ],
+    observacoes: [
+      'Alguns containers podem precisar de privileged mode',
+      'Para GPU passthrough, use VM KVM',
+    ],
   },
 
-  // ============ ROUTERS ============
+  // ============ STORAGE ============
   {
-    id: 'rb4011-basic',
-    titulo: 'RB4011 - Configuração Básica ISP',
-    descricao: 'Configuração completa para provedor com NAT, DHCP, Firewall e controle de banda',
-    equipamento: 'RB4011iGS+',
-    categoria: 'router',
-    tags: ['RB4011', 'ISP', 'NAT', 'Firewall'],
-    codigo: `# ==========================================
-# RB4011 - Configuração ISP Básica
+    id: 'zfs-pool-create',
+    titulo: 'Criar Pool ZFS',
+    descricao: 'Criar pool ZFS com diferentes níveis de RAID',
+    equipamento: 'Proxmox VE',
+    categoria: 'storage',
+    tags: ['ZFS', 'pool', 'RAID', 'storage'],
+    codigo: `#!/bin/bash
+# ==========================================
+# Criar Pool ZFS
 # ==========================================
 
-/system identity set name="RTR-BORDA-01"
+POOL_NAME=\${1:-"tank"}
+RAID_TYPE=\${2:-"raidz1"}  # mirror, raidz1, raidz2, raidz3
+DISKS="\${@:3}"            # /dev/sdb /dev/sdc /dev/sdd
 
+if [ -z "$DISKS" ]; then
+  echo "Uso: $0 <pool_name> <raid_type> <discos...>"
+  echo "Tipos: mirror, raidz1, raidz2, raidz3, stripe"
+  echo "Exemplo: $0 tank raidz1 /dev/sdb /dev/sdc /dev/sdd"
+  exit 1
+fi
+
+echo "Criando pool ZFS: $POOL_NAME ($RAID_TYPE)"
+echo "Discos: $DISKS"
+echo ""
+read -p "Confirmar? (s/N): " CONFIRM
+[ "$CONFIRM" != "s" ] && exit 1
+
+# Criar pool
+if [ "$RAID_TYPE" = "stripe" ]; then
+  zpool create -f $POOL_NAME $DISKS
+else
+  zpool create -f $POOL_NAME $RAID_TYPE $DISKS
+fi
+
+# Configurações otimizadas
+zfs set compression=lz4 $POOL_NAME
+zfs set atime=off $POOL_NAME
+zfs set xattr=sa $POOL_NAME
+zfs set acltype=posixacl $POOL_NAME
+
+# Adicionar ao Proxmox
+pvesm add zfspool $POOL_NAME-storage -pool $POOL_NAME
+
+echo ""
+echo "Pool criado com sucesso!"
+zpool status $POOL_NAME`,
+    explicacao: `Cria pool ZFS otimizado para Proxmox:
+
+**Níveis de RAID:**
+- mirror: Espelhamento (mínimo 2 discos)
+- raidz1: RAID-5 (tolera 1 falha)
+- raidz2: RAID-6 (tolera 2 falhas)
+- raidz3: Tolera 3 falhas
+- stripe: Sem redundância (máximo desempenho)
+
+**Otimizações aplicadas:**
+- Compressão LZ4 (transparente)
+- atime desabilitado
+- ACLs POSIX habilitadas`,
+    requisitos: ['Discos dedicados (serão formatados)'],
+    observacoes: [
+      'RAIDZ1 precisa mínimo 3 discos',
+      'RAIDZ2 precisa mínimo 4 discos',
+    ],
+  },
+  {
+    id: 'zfs-snapshot-auto',
+    titulo: 'Snapshots ZFS Automáticos',
+    descricao: 'Script para snapshots automáticos com retenção',
+    equipamento: 'Proxmox VE',
+    categoria: 'storage',
+    tags: ['ZFS', 'snapshot', 'automação', 'backup'],
+    codigo: `#!/bin/bash
 # ==========================================
-# 1. INTERFACES
+# Snapshots ZFS Automáticos
 # ==========================================
-# ether1 = WAN (Link Operadora)
-# ether2-10 = LAN / Clientes
-# sfp-sfpplus1 = Link para Core Switch
 
-/interface list add name=WAN
-/interface list add name=LAN
-/interface list member add interface=ether1 list=WAN
-/interface list member add interface=ether2 list=LAN
-/interface list member add interface=ether3 list=LAN
-/interface list member add interface=ether4 list=LAN
-/interface list member add interface=ether5 list=LAN
+DATASET=\${1:-"rpool/data"}
+RETENTION_HOURLY=\${2:-24}
+RETENTION_DAILY=\${3:-7}
+RETENTION_WEEKLY=\${4:-4}
 
-# ==========================================
-# 2. BRIDGE PARA LAN
-# ==========================================
-/interface bridge add name=bridge-lan
-/interface bridge port
-add bridge=bridge-lan interface=ether2
-add bridge=bridge-lan interface=ether3
-add bridge=bridge-lan interface=ether4
-add bridge=bridge-lan interface=ether5
+DATE=$(date +%Y-%m-%d_%H-%M)
+TYPE="auto"
 
-# ==========================================
-# 3. ENDEREÇAMENTO IP
-# ==========================================
-# WAN - IP da Operadora (ajuste conforme contrato)
-/ip address add address=200.100.50.2/30 interface=ether1 comment="WAN - Operadora"
+# Determinar tipo baseado na hora
+HOUR=$(date +%H)
+DOW=$(date +%u)
 
-# LAN - Rede interna
-/ip address add address=10.0.0.1/24 interface=bridge-lan comment="LAN Gateway"
+if [ "$HOUR" = "00" ] && [ "$DOW" = "7" ]; then
+  TYPE="weekly"
+elif [ "$HOUR" = "00" ]; then
+  TYPE="daily"
+else
+  TYPE="hourly"
+fi
 
-# Rota padrão
-/ip route add dst-address=0.0.0.0/0 gateway=200.100.50.1 comment="Default via Operadora"
+SNAP_NAME="$DATASET@${TYPE}_$DATE"
 
-# DNS
-/ip dns set servers=8.8.8.8,1.1.1.1 allow-remote-requests=yes
+# Criar snapshot
+echo "Criando snapshot: $SNAP_NAME"
+zfs snapshot $SNAP_NAME
 
-# ==========================================
-# 4. DHCP SERVER
-# ==========================================
-/ip pool add name=pool-lan ranges=10.0.0.100-10.0.0.250
+# Limpar snapshots antigos
+cleanup_snapshots() {
+  local pattern=$1
+  local keep=$2
+  
+  zfs list -t snapshot -o name -s creation | grep "$DATASET@${pattern}" | head -n -$keep | while read snap; do
+    echo "Removendo: $snap"
+    zfs destroy $snap
+  done
+}
 
-/ip dhcp-server add name=dhcp-lan interface=bridge-lan address-pool=pool-lan lease-time=1d
+cleanup_snapshots "hourly" $RETENTION_HOURLY
+cleanup_snapshots "daily" $RETENTION_DAILY
+cleanup_snapshots "weekly" $RETENTION_WEEKLY
 
-/ip dhcp-server network add address=10.0.0.0/24 gateway=10.0.0.1 dns-server=10.0.0.1
+echo "Snapshots atuais:"
+zfs list -t snapshot -o name,creation,used | grep $DATASET`,
+    explicacao: `Gerencia snapshots ZFS com retenção:
 
-# ==========================================
-# 5. NAT (Masquerade)
-# ==========================================
-/ip firewall nat add chain=srcnat out-interface-list=WAN action=masquerade comment="NAT para Internet"
+**Tipos de snapshot:**
+- Hourly: A cada hora (mantém 24)
+- Daily: Meia-noite (mantém 7)
+- Weekly: Domingo meia-noite (mantém 4)
 
-# ==========================================
-# 6. FIREWALL BÁSICO
-# ==========================================
-/ip firewall filter
-
-# Input Chain
-add chain=input action=accept connection-state=established,related comment="Accept established"
-add chain=input action=drop connection-state=invalid comment="Drop invalid"
-add chain=input action=accept protocol=icmp limit=10,5:packet comment="ICMP limited"
-add chain=input action=accept src-address=10.0.0.0/24 comment="Accept from LAN"
-add chain=input action=drop in-interface-list=WAN comment="Drop all from WAN"
-
-# Forward Chain
-add chain=forward action=accept connection-state=established,related comment="Accept established"
-add chain=forward action=drop connection-state=invalid comment="Drop invalid"
-add chain=forward action=accept in-interface=bridge-lan out-interface-list=WAN comment="LAN to WAN"
-add chain=forward action=drop comment="Drop all other"
-
-# ==========================================
-# 7. SERVIÇOS E SEGURANÇA
-# ==========================================
-/ip service
-set telnet disabled=yes
-set ftp disabled=yes
-set www disabled=yes
-set api disabled=yes
-set api-ssl disabled=yes
-set ssh port=2222
-set winbox port=8291
-
-# Proteção contra port scan
-/ip firewall filter add chain=input action=add-src-to-address-list \\
-  address-list=port-scanners address-list-timeout=2w \\
-  protocol=tcp psd=21,3s,3,1 comment="Port scanner detect"
-add chain=input action=drop src-address-list=port-scanners comment="Drop port scanners"
-
-# ==========================================
-# 8. NTP E LOGGING
-# ==========================================
-/system ntp client set enabled=yes
-/system ntp client servers add address=a.ntp.br
-
-/system logging action add name=remote target=remote remote=10.0.0.10 remote-port=514
-/system logging add topics=firewall action=remote`,
-    explicacao: `Configuração completa de router de borda para ISP pequeno/médio com:
-
-- Separação WAN/LAN com interface lists
-- NAT masquerade para saída
-- Firewall stateful com proteção básica
-- DHCP server para rede interna
-- Serviços seguros`
+**Para automatizar, adicione ao crontab:**
+\`\`\`
+0 * * * * /root/zfs-snapshot.sh rpool/data
+\`\`\``,
   },
 
-  // ============ WIRELESS ============
+  // ============ NETWORK ============
   {
-    id: 'capsman-basic',
-    titulo: 'CAPsMAN v2 - Controlador Central',
-    descricao: 'Configuração do CAPsMAN para gerenciar múltiplos APs MikroTik',
-    equipamento: 'Qualquer RouterBoard',
-    categoria: 'wireless',
-    tags: ['CAPsMAN', 'Wireless', 'AP', 'Controller'],
-    codigo: `# ==========================================
-# CAPsMAN v2 - Configuração do Controlador
+    id: 'network-vlan-bridge',
+    titulo: 'Bridge com VLAN',
+    descricao: 'Configurar bridge VLAN-aware para múltiplas redes',
+    equipamento: 'Proxmox VE',
+    categoria: 'network',
+    tags: ['VLAN', 'bridge', 'rede', 'vmbr'],
+    codigo: `#!/bin/bash
 # ==========================================
-# Este script configura o CAPsMAN no router central
+# Configurar Bridge VLAN-Aware
+# ==========================================
 
-# ==========================================
-# 1. HABILITAR CAPsMAN
-# ==========================================
-/caps-man manager set enabled=yes
+# Este script gera configuração para /etc/network/interfaces
 
-# ==========================================
-# 2. CANAIS
-# ==========================================
-/caps-man channel
-add name=ch-2ghz band=2ghz-g/n frequency=2437 extension-channel=Ce control-channel-width=20mhz
-add name=ch-5ghz band=5ghz-n/ac frequency=5180 extension-channel=Ceee control-channel-width=20mhz
+cat << 'EOF'
+# /etc/network/interfaces - VLAN-Aware Bridge
 
-# ==========================================
-# 3. DATAPATH (Como o tráfego flui)
-# ==========================================
-/caps-man datapath
-add name=dp-bridge bridge=bridge-lan local-forwarding=no
-add name=dp-guests bridge=bridge-guests local-forwarding=no client-to-client-forwarding=no
+auto lo
+iface lo inet loopback
 
-# ==========================================
-# 4. SECURITY (Perfis de Segurança)
-# ==========================================
-/caps-man security
-add name=sec-corp authentication-types=wpa2-psk encryption=aes-ccm passphrase="SenhaCorpSegura2024"
-add name=sec-guest authentication-types=wpa2-psk encryption=aes-ccm passphrase="GuestWifi2024"
+# Interface física
+auto eno1
+iface eno1 inet manual
 
-# ==========================================
-# 5. CONFIGURAÇÕES (Perfis Completos)
-# ==========================================
-/caps-man configuration
-add name=cfg-corp-2g mode=ap ssid="Empresa-Corp" datapath=dp-bridge security=sec-corp \\
-  channel=ch-2ghz country=brazil installation=indoor
-add name=cfg-corp-5g mode=ap ssid="Empresa-Corp-5G" datapath=dp-bridge security=sec-corp \\
-  channel=ch-5ghz country=brazil installation=indoor
-add name=cfg-guest mode=ap ssid="Empresa-Guest" datapath=dp-guests security=sec-guest \\
-  channel=ch-2ghz country=brazil installation=indoor
+# Bridge VLAN-aware principal
+auto vmbr0
+iface vmbr0 inet static
+    address 192.168.1.10/24
+    gateway 192.168.1.1
+    bridge-ports eno1
+    bridge-stp off
+    bridge-fd 0
+    bridge-vlan-aware yes
+    bridge-vids 2-4094
 
-# ==========================================
-# 6. PROVISIONING (Auto-configuração de APs)
-# ==========================================
-/caps-man provisioning
-add action=create-dynamic-enabled master-configuration=cfg-corp-2g slave-configurations=cfg-corp-5g,cfg-guest \\
-  name-format=identity hw-supported-modes=gn
-add action=create-dynamic-enabled master-configuration=cfg-corp-5g \\
-  name-format=identity hw-supported-modes=an,ac
+# VLANs configuradas:
+# VLAN 10: Servidores (192.168.10.0/24)
+# VLAN 20: Usuários (192.168.20.0/24)
+# VLAN 30: DMZ (192.168.30.0/24)
+# VLAN 100: Gerenciamento (192.168.100.0/24)
 
-# ==========================================
-# 7. ACCESS LIST (Opcional - Controle de MACs)
-# ==========================================
-/caps-man access-list
-add mac-address=AA:BB:CC:DD:EE:FF interface=any action=accept comment="Dispositivo VIP"
-add action=accept signal-range=-75..120 comment="Accept good signal"
-add action=reject comment="Reject weak signal"
+# Para VMs, configure:
+# - net0: virtio,bridge=vmbr0,tag=10
+EOF
 
-# ==========================================
-# 8. VERIFICAR STATUS
-# ==========================================
-/caps-man interface print
-/caps-man registration-table print
-/caps-man remote-cap print`,
-    explicacao: `CAPsMAN (Controlled Access Point system Manager) permite gerenciar centralmente todos os APs MikroTik.
+echo ""
+echo "Copie a configuração acima para /etc/network/interfaces"
+echo "Depois execute: ifreload -a"`,
+    explicacao: `Configura bridge VLAN-aware:
 
 **Vantagens:**
-- Configuração centralizada
-- Roaming transparente entre APs
-- Monitoramento unificado
-- Atualizações em massa
+- Uma única bridge para todas VLANs
+- Configuração simplificada
+- Melhor desempenho que múltiplas bridges
 
-**Fluxo de tráfego:**
-- local-forwarding=no: Tráfego passa pelo controlador
-- local-forwarding=yes: Tráfego direto do AP (menor latência)`,
-    requisitos: [
-      'RouterOS v6.22+ ou v7.x',
-      'APs compatíveis com CAP mode'
-    ]
+**Na VM, configure a VLAN via:**
+- Interface web: Hardware > Network > VLAN Tag
+- CLI: qm set <vmid> --net0 virtio,bridge=vmbr0,tag=10`,
   },
-
-  // ============ VPN ============
   {
-    id: 'wireguard-s2s',
-    titulo: 'WireGuard - Site-to-Site VPN',
-    descricao: 'VPN WireGuard entre duas localidades com roteamento automático',
-    equipamento: 'Qualquer RouterBoard',
-    categoria: 'vpn',
-    tags: ['WireGuard', 'VPN', 'S2S', 'Tunnel'],
-    codigo: `# ==========================================
-# WireGuard Site-to-Site VPN
+    id: 'network-bonding',
+    titulo: 'Bonding de Interfaces',
+    descricao: 'Configurar agregação de links para redundância',
+    equipamento: 'Proxmox VE',
+    categoria: 'network',
+    tags: ['bonding', 'LACP', 'redundância', 'rede'],
+    codigo: `#!/bin/bash
 # ==========================================
-# SITE A: 192.168.1.0/24 - IP Público: 200.100.1.1
-# SITE B: 192.168.2.0/24 - IP Público: 200.100.2.1
-
-# ============ SITE A (Matriz) ============
-
-# 1. Criar interface WireGuard
-/interface wireguard add name=wg-siteb listen-port=13231 mtu=1420
-
-# 2. Obter chave pública (anote para usar no Site B)
-/interface wireguard print
-# Copie o valor de "public-key"
-
-# 3. Adicionar peer (Site B)
-/interface wireguard peers add interface=wg-siteb \\
-  public-key="CHAVE_PUBLICA_DO_SITE_B" \\
-  endpoint-address=200.100.2.1 endpoint-port=13231 \\
-  allowed-address=192.168.2.0/24,10.255.255.2/32 \\
-  persistent-keepalive=25s
-
-# 4. Endereço do túnel
-/ip address add address=10.255.255.1/30 interface=wg-siteb
-
-# 5. Rota para rede remota
-/ip route add dst-address=192.168.2.0/24 gateway=wg-siteb
-
-# 6. Firewall - Permitir WireGuard
-/ip firewall filter add chain=input action=accept protocol=udp dst-port=13231 comment="WireGuard"
-/ip firewall filter add chain=forward action=accept in-interface=wg-siteb comment="WireGuard forward"
-/ip firewall filter add chain=forward action=accept out-interface=wg-siteb comment="WireGuard forward"
-
-# ============ SITE B (Filial) ============
-
-# 1. Criar interface WireGuard
-/interface wireguard add name=wg-sitea listen-port=13231 mtu=1420
-
-# 2. Obter chave pública (anote para usar no Site A)
-/interface wireguard print
-
-# 3. Adicionar peer (Site A)
-/interface wireguard peers add interface=wg-sitea \\
-  public-key="CHAVE_PUBLICA_DO_SITE_A" \\
-  endpoint-address=200.100.1.1 endpoint-port=13231 \\
-  allowed-address=192.168.1.0/24,10.255.255.1/32 \\
-  persistent-keepalive=25s
-
-# 4. Endereço do túnel
-/ip address add address=10.255.255.2/30 interface=wg-sitea
-
-# 5. Rota para rede remota
-/ip route add dst-address=192.168.1.0/24 gateway=wg-sitea
-
-# 6. Firewall - Permitir WireGuard
-/ip firewall filter add chain=input action=accept protocol=udp dst-port=13231 comment="WireGuard"
-/ip firewall filter add chain=forward action=accept in-interface=wg-sitea comment="WireGuard forward"
-/ip firewall filter add chain=forward action=accept out-interface=wg-sitea comment="WireGuard forward"
-
-# ============ VERIFICAR CONEXÃO ============
-/interface wireguard peers print
-/ping 10.255.255.2
-/ping 192.168.2.1`,
-    explicacao: `WireGuard é a VPN mais moderna e rápida disponível no RouterOS 7.
-
-**Características:**
-- Criptografia state-of-the-art (ChaCha20, Curve25519)
-- Baixa latência e overhead
-- Código auditado e simples
-- Roaming automático
-
-**Processo:**
-1. Criar interfaces WireGuard em ambos os lados
-2. Trocar chaves públicas
-3. Configurar peers com allowed-address
-4. Adicionar rotas para redes remotas`,
-    requisitos: ['RouterOS v7.1+', 'IP público ou port-forward em ambos os lados']
-  },
-
-  // ============ QoS ============
-  {
-    id: 'qos-htb-isp',
-    titulo: 'QoS com HTB - Controle de Banda ISP',
-    descricao: 'Sistema completo de controle de banda para provedores com priorização',
-    equipamento: 'Qualquer RouterBoard',
-    categoria: 'qos',
-    tags: ['QoS', 'HTB', 'Queue', 'ISP', 'Bandwidth'],
-    codigo: `# ==========================================
-# QoS HTB para ISP
+# Configurar Bonding
 # ==========================================
-# Sistema de controle de banda com priorização
-# de tráfego por tipo de serviço
+
+cat << 'EOF'
+# /etc/network/interfaces - Bonding Configuration
+
+auto lo
+iface lo inet loopback
+
+# Interfaces físicas
+auto eno1
+iface eno1 inet manual
+
+auto eno2
+iface eno2 inet manual
+
+# Bonding - Mode 1 (active-backup) para failover
+auto bond0
+iface bond0 inet manual
+    bond-slaves eno1 eno2
+    bond-miimon 100
+    bond-mode active-backup
+    bond-primary eno1
+
+# Bridge sobre o bonding
+auto vmbr0
+iface vmbr0 inet static
+    address 192.168.1.10/24
+    gateway 192.168.1.1
+    bridge-ports bond0
+    bridge-stp off
+    bridge-fd 0
 
 # ==========================================
-# 1. MANGLE - Marcação de Pacotes
+# Modos de Bonding Alternativos:
 # ==========================================
-/ip firewall mangle
+# mode 0 (balance-rr): Round-robin
+# mode 1 (active-backup): Failover
+# mode 2 (balance-xor): XOR hash
+# mode 4 (802.3ad): LACP - requer switch
+# mode 5 (balance-tlb): Transmit load balancing
+# mode 6 (balance-alb): Adaptive load balancing
+EOF
 
-# Marcar conexões por tipo de tráfego
-add chain=prerouting action=mark-connection new-connection-mark=voip_conn \\
-  protocol=udp dst-port=5060-5061,10000-20000 passthrough=yes comment="VoIP"
-add chain=prerouting action=mark-connection new-connection-mark=gaming_conn \\
-  protocol=udp dst-port=3478-3480,27000-27050 passthrough=yes comment="Gaming"
-add chain=prerouting action=mark-connection new-connection-mark=streaming_conn \\
-  layer7-protocol=streaming passthrough=yes comment="Streaming"
+echo ""
+echo "Mode 1 (active-backup) não requer configuração no switch"
+echo "Mode 4 (802.3ad/LACP) requer switch com LACP habilitado"`,
+    explicacao: `Configura agregação de interfaces:
 
-# Marcar pacotes baseado nas conexões
-add chain=prerouting action=mark-packet new-packet-mark=voip_pkt \\
-  connection-mark=voip_conn passthrough=no
-add chain=prerouting action=mark-packet new-packet-mark=gaming_pkt \\
-  connection-mark=gaming_conn passthrough=no
-add chain=prerouting action=mark-packet new-packet-mark=streaming_pkt \\
-  connection-mark=streaming_conn passthrough=no
-add chain=prerouting action=mark-packet new-packet-mark=default_pkt passthrough=no
+**Modos mais usados:**
+- **active-backup**: Failover simples, não requer switch
+- **802.3ad (LACP)**: Agregação real, requer switch compatível
 
-# ==========================================
-# 2. LAYER7 PROTOCOLS
-# ==========================================
-/ip firewall layer7-protocol
-add name=streaming regexp="(netflix|youtube|twitch|hulu)"
-
-# ==========================================
-# 3. QUEUE TREE - Hierarquia HTB
-# ==========================================
-# Parent - Link total disponível
-/queue tree add name=DOWNLOAD parent=bridge-lan max-limit=100M
-/queue tree add name=UPLOAD parent=ether1 max-limit=50M
-
-# Filas filhas com prioridades (1=maior, 8=menor)
-# VoIP - Máxima prioridade
-/queue tree add name=voip-down parent=DOWNLOAD packet-mark=voip_pkt \\
-  priority=1 limit-at=2M max-limit=5M queue=pcq-download-default
-/queue tree add name=voip-up parent=UPLOAD packet-mark=voip_pkt \\
-  priority=1 limit-at=2M max-limit=5M queue=pcq-upload-default
-
-# Gaming - Alta prioridade
-/queue tree add name=gaming-down parent=DOWNLOAD packet-mark=gaming_pkt \\
-  priority=2 limit-at=5M max-limit=20M queue=pcq-download-default
-/queue tree add name=gaming-up parent=UPLOAD packet-mark=gaming_pkt \\
-  priority=2 limit-at=2M max-limit=10M queue=pcq-upload-default
-
-# Streaming - Prioridade média
-/queue tree add name=streaming-down parent=DOWNLOAD packet-mark=streaming_pkt \\
-  priority=4 limit-at=10M max-limit=50M queue=pcq-download-default
-
-# Default - Prioridade normal
-/queue tree add name=default-down parent=DOWNLOAD packet-mark=default_pkt \\
-  priority=5 limit-at=10M max-limit=80M queue=pcq-download-default
-/queue tree add name=default-up parent=UPLOAD packet-mark=default_pkt \\
-  priority=5 limit-at=5M max-limit=40M queue=pcq-upload-default
-
-# ==========================================
-# 4. PCQ - Per Connection Queue
-# ==========================================
-/queue type
-add name=pcq-download-default kind=pcq pcq-rate=0 pcq-classifier=dst-address
-add name=pcq-upload-default kind=pcq pcq-rate=0 pcq-classifier=src-address
-
-# ==========================================
-# 5. SIMPLE QUEUES POR CLIENTE (Opcional)
-# ==========================================
-# Plano 50Mbps
-/queue simple add name=cliente-001 target=10.0.0.100/32 \\
-  max-limit=50M/50M burst-limit=60M/60M burst-threshold=40M/40M burst-time=10s/10s
-
-# Plano 100Mbps
-/queue simple add name=cliente-002 target=10.0.0.101/32 \\
-  max-limit=100M/100M burst-limit=120M/120M burst-threshold=80M/80M burst-time=10s/10s`,
-    explicacao: `Sistema QoS completo com HTB (Hierarchical Token Bucket) para ISPs.
-
-**Hierarquia de Prioridades:**
-1. VoIP (1) - Garantia de qualidade para chamadas
-2. Gaming (2) - Baixa latência para jogos
-3. Navegação (3) - Tráfego web normal
-4. Streaming (4) - Netflix, YouTube
-5. Default (5) - Todo o resto
-
-**PCQ divide banda igualmente entre conexões ativas.**`
+**Benefícios:**
+- Redundância de link
+- Maior throughput (com LACP)
+- Failover automático`,
+    requisitos: ['Duas ou mais interfaces de rede'],
+    observacoes: ['LACP requer configuração no switch também'],
   },
 
   // ============ BACKUP ============
   {
-    id: 'backup-auto',
-    titulo: 'Backup Automático com Envio por Email',
-    descricao: 'Script de backup automático com envio para servidor FTP e notificação por email',
-    equipamento: 'Qualquer RouterBoard',
+    id: 'backup-vzdump-all',
+    titulo: 'Backup de Todas VMs/CTs',
+    descricao: 'Script para backup completo de todas as VMs e containers',
+    equipamento: 'Proxmox VE',
     categoria: 'backup',
-    tags: ['Backup', 'Script', 'Automation', 'Email'],
-    codigo: `# ==========================================
-# Sistema de Backup Automático
+    tags: ['vzdump', 'backup', 'automação'],
+    codigo: `#!/bin/bash
+# ==========================================
+# Backup de Todas VMs/CTs
 # ==========================================
 
-# ==========================================
-# 1. CONFIGURAR EMAIL
-# ==========================================
-/tool e-mail set server=smtp.gmail.com port=587 \\
-  from="router@empresa.com" \\
-  user="router@empresa.com" \\
-  password="app-password-aqui" \\
-  tls=starttls
+STORAGE=\${1:-"local"}
+MODE=\${2:-"snapshot"}  # snapshot, suspend, stop
+COMPRESS=\${3:-"zstd"}
+MAILTO=\${4:-"admin@example.com"}
 
+# Diretório de backup
+BACKUP_DIR="/var/lib/vz/dump"
+LOG_FILE="/var/log/backup-$(date +%Y%m%d).log"
+
+echo "=== Backup iniciado: $(date) ===" | tee -a $LOG_FILE
+
+# Listar todas VMs e CTs
+VMS=$(qm list | awk 'NR>1 {print $1}')
+CTS=$(pct list | awk 'NR>1 {print $1}')
+
+# Backup VMs
+for VMID in $VMS; do
+  echo "Backup VM $VMID..." | tee -a $LOG_FILE
+  vzdump $VMID \\
+    --storage $STORAGE \\
+    --mode $MODE \\
+    --compress $COMPRESS \\
+    --mailto $MAILTO \\
+    --mailnotification always \\
+    2>&1 | tee -a $LOG_FILE
+done
+
+# Backup Containers
+for CTID in $CTS; do
+  echo "Backup CT $CTID..." | tee -a $LOG_FILE
+  vzdump $CTID \\
+    --storage $STORAGE \\
+    --mode $MODE \\
+    --compress $COMPRESS \\
+    --mailto $MAILTO \\
+    --mailnotification always \\
+    2>&1 | tee -a $LOG_FILE
+done
+
+echo "=== Backup finalizado: $(date) ===" | tee -a $LOG_FILE
+
+# Limpar backups antigos (manter últimos 7 dias)
+find $BACKUP_DIR -name "*.vma*" -mtime +7 -delete
+find $BACKUP_DIR -name "*.tar*" -mtime +7 -delete
+
+echo "Backups antigos removidos" | tee -a $LOG_FILE`,
+    explicacao: `Backup automatizado de todo o ambiente:
+
+**Modos de backup:**
+- snapshot: Menor interrupção, requer storage compatível
+- suspend: Pausa VM durante backup
+- stop: Para VM durante backup (mais consistente)
+
+**Compressão:**
+- zstd: Melhor relação velocidade/compressão
+- lzo: Mais rápido
+- gzip: Mais compacto`,
+    requisitos: ['Storage com espaço suficiente'],
+  },
+
+  // ============ CLUSTER ============
+  {
+    id: 'cluster-create',
+    titulo: 'Criar Cluster',
+    descricao: 'Script para criar e adicionar nós ao cluster',
+    equipamento: 'Proxmox VE',
+    categoria: 'cluster',
+    tags: ['cluster', 'pvecm', 'HA', 'corosync'],
+    codigo: `#!/bin/bash
 # ==========================================
-# 2. SCRIPT DE BACKUP
+# Criar/Gerenciar Cluster Proxmox
 # ==========================================
-/system script add name=backup-completo source={
-  :local sysname [/system identity get name]
-  :local date [/system clock get date]
-  :local time [/system clock get time]
-  :local fileName ($sysname . "-" . [:pick $date 0 11] . "-backup")
-  
-  # Criar backup binário
-  /system backup save name=$fileName dont-encrypt=yes
-  :delay 3s
-  
-  # Criar export em texto
-  /export file=($fileName . "-export")
-  :delay 3s
-  
-  # Enviar por email
-  :local backupFile ($fileName . ".backup")
-  :local exportFile ($fileName . "-export.rsc")
-  
-  /tool e-mail send to="admin@empresa.com" \\
-    subject=("Backup: " . $sysname . " - " . $date) \\
-    body=("Backup automático realizado em " . $date . " às " . $time . "\\n\\nArquivos em anexo.") \\
-    file=($backupFile . "," . $exportFile)
-  
-  :delay 10s
-  
-  # Upload para FTP (opcional)
-  /tool fetch url="ftp://192.168.1.10/" \\
-    user=backup password="senha123" \\
-    src-path=$backupFile mode=ftp upload=yes
-  
-  # Limpar backups antigos (manter últimos 7)
-  :local backupList [/file find name~"backup"]
-  :if ([:len $backupList] > 14) do={
-    :local oldest [/file find name~"backup"]
-    /file remove [:pick $oldest 0 2]
-  }
-  
-  :log info ("Backup completo: " . $fileName)
+
+ACTION=\${1:-help}
+CLUSTER_NAME=\${2:-"proxmox-cluster"}
+NODE_IP=\${2:-""}
+
+case $ACTION in
+  create)
+    echo "Criando cluster: $CLUSTER_NAME"
+    pvecm create $CLUSTER_NAME
+    echo ""
+    echo "Cluster criado! Para adicionar nós:"
+    echo "No novo nó, execute: pvecm add $(hostname -I | awk '{print $1}')"
+    ;;
+    
+  add)
+    if [ -z "$NODE_IP" ]; then
+      echo "Uso: $0 add <IP_do_primeiro_nó>"
+      exit 1
+    fi
+    echo "Adicionando este nó ao cluster em $NODE_IP"
+    pvecm add $NODE_IP
+    ;;
+    
+  status)
+    echo "=== Status do Cluster ==="
+    pvecm status
+    echo ""
+    echo "=== Nós do Cluster ==="
+    pvecm nodes
+    ;;
+    
+  expected)
+    # Ajustar expected votes (útil para manutenção)
+    VOTES=\${2:-1}
+    echo "Ajustando expected votes para $VOTES"
+    pvecm expected $VOTES
+    ;;
+    
+  *)
+    echo "Uso: $0 <create|add|status|expected> [parâmetros]"
+    echo ""
+    echo "Ações:"
+    echo "  create <nome>      - Criar novo cluster"
+    echo "  add <ip>           - Adicionar este nó ao cluster"
+    echo "  status             - Ver status do cluster"
+    echo "  expected <votes>   - Ajustar expected votes"
+    ;;
+esac`,
+    explicacao: `Gerenciamento de cluster Proxmox:
+
+**Requisitos para cluster:**
+- Mínimo 3 nós para quorum (ou 2 + quorum device)
+- Rede dedicada para corosync (recomendado)
+- Mesmo DNS/hostname resolvível
+
+**Ordem de criação:**
+1. Criar cluster no primeiro nó
+2. Adicionar demais nós
+
+**IMPORTANTE:** Backups antes de qualquer operação de cluster!`,
+    requisitos: [
+      'IPs fixos em todos os nós',
+      'Portas 5404-5405 UDP abertas',
+      'SSH root entre nós',
+    ],
+  },
+
+  // ============ MONITORAMENTO ============
+  {
+    id: 'monitor-resources',
+    titulo: 'Monitor de Recursos',
+    descricao: 'Script para monitorar uso de recursos do host',
+    equipamento: 'Proxmox VE',
+    categoria: 'monitor',
+    tags: ['monitoramento', 'recursos', 'CPU', 'RAM'],
+    codigo: `#!/bin/bash
+# ==========================================
+# Monitor de Recursos Proxmox
+# ==========================================
+
+clear
+echo "=========================================="
+echo "        MONITOR PROXMOX VE"
+echo "=========================================="
+echo ""
+
+# CPU
+echo "=== CPU ==="
+echo "Load: $(cat /proc/loadavg | awk '{print $1, $2, $3}')"
+echo "Cores: $(nproc)"
+echo ""
+
+# Memória
+echo "=== MEMÓRIA ==="
+free -h | grep -E "^Mem|^Swap"
+echo ""
+
+# Storage
+echo "=== STORAGE ==="
+df -h | grep -E "^/dev|^rpool|^tank"
+echo ""
+
+# ZFS (se disponível)
+if command -v zpool &> /dev/null; then
+  echo "=== ZFS POOLS ==="
+  zpool list
+  echo ""
+fi
+
+# VMs rodando
+echo "=== VMs RODANDO ==="
+qm list | grep running
+echo ""
+
+# Containers rodando
+echo "=== CONTAINERS RODANDO ==="
+pct list | grep running
+echo ""
+
+# Rede
+echo "=== REDE ==="
+ip -br addr | grep -E "^vmbr|^bond|^eth|^eno"
+echo ""
+
+# Atualizações pendentes
+echo "=== ATUALIZAÇÕES ==="
+apt list --upgradable 2>/dev/null | head -5
+echo ""
+
+echo "=========================================="
+echo "Atualizado em: $(date)"`,
+    explicacao: `Visão rápida do estado do sistema:
+
+**Informações exibidas:**
+- Load average e cores
+- Uso de memória RAM e Swap
+- Espaço em disco/ZFS
+- VMs e containers em execução
+- Interfaces de rede
+- Atualizações pendentes`,
+  },
+
+  // ============ AUTOMAÇÃO ============
+  {
+    id: 'automation-maintenance',
+    titulo: 'Manutenção Automatizada',
+    descricao: 'Script de manutenção diária do Proxmox',
+    equipamento: 'Proxmox VE',
+    categoria: 'automation',
+    tags: ['manutenção', 'limpeza', 'automação', 'cron'],
+    codigo: `#!/bin/bash
+# ==========================================
+# Manutenção Automatizada Proxmox
+# ==========================================
+
+LOG="/var/log/proxmox-maintenance.log"
+DATE=$(date '+%Y-%m-%d %H:%M:%S')
+
+log() {
+  echo "[$DATE] $1" | tee -a $LOG
 }
 
-# ==========================================
-# 3. AGENDAR EXECUÇÃO
-# ==========================================
-/system scheduler add name=backup-diario interval=1d start-time=03:00:00 \\
-  on-event=backup-completo
+log "=== Iniciando manutenção ==="
 
-/system scheduler add name=backup-semanal interval=7d start-time=04:00:00 \\
-  on-event={
-    /system script run backup-completo
-    :log warning "Backup semanal executado"
-  }
+# 1. Limpar cache APT
+log "Limpando cache APT..."
+apt-get clean
+apt-get autoclean
 
-# ==========================================
-# 4. BACKUP ANTES DE ATUALIZAÇÃO
-# ==========================================
-/system script add name=backup-pre-update source={
-  :local sysname [/system identity get name]
-  :local version [/system resource get version]
-  :local fileName ($sysname . "-pre-update-" . $version)
-  
-  /system backup save name=$fileName
-  /export file=$fileName
-  
-  :log warning ("Backup pré-atualização: " . $fileName)
-}`,
-    explicacao: `Sistema completo de backup automático com:
+# 2. Remover kernels antigos (manter 2 últimos)
+log "Verificando kernels antigos..."
+dpkg --list | grep linux-image | awk '{print $2}' | sort -V | head -n -2 | xargs -r apt-get -y purge
 
-**Funcionalidades:**
-- Backup binário (.backup) para restore rápido
-- Export texto (.rsc) para referência e diff
-- Envio por email com anexos
-- Upload para servidor FTP
-- Limpeza automática de backups antigos
-- Agendamento diário e semanal
+# 3. Limpar logs antigos
+log "Rotacionando logs..."
+logrotate -f /etc/logrotate.conf
 
-**Dicas:**
-- Use App Password do Gmail (não a senha normal)
-- Teste o envio de email antes de confiar no backup`
+# 4. Limpar task logs do Proxmox (manter 30 dias)
+log "Limpando task logs antigos..."
+find /var/log/pve/tasks -type f -mtime +30 -delete
+
+# 5. Verificar ZFS (se disponível)
+if command -v zpool &> /dev/null; then
+  log "Verificando pools ZFS..."
+  zpool scrub rpool &
+fi
+
+# 6. Verificar espaço em disco
+USAGE=$(df / | tail -1 | awk '{print $5}' | tr -d '%')
+if [ "$USAGE" -gt 80 ]; then
+  log "ALERTA: Disco raiz com $USAGE% de uso!"
+fi
+
+# 7. Atualizar lista de pacotes
+log "Atualizando lista de pacotes..."
+apt-get update
+
+# 8. Listar atualizações disponíveis
+UPDATES=$(apt list --upgradable 2>/dev/null | wc -l)
+log "Atualizações disponíveis: $((UPDATES-1))"
+
+log "=== Manutenção concluída ==="
+
+# Para agendar, adicione ao crontab:
+# 0 3 * * * /root/maintenance.sh`,
+    explicacao: `Script de manutenção para rodar periodicamente:
+
+**Tarefas executadas:**
+- Limpa cache do APT
+- Remove kernels antigos
+- Rotaciona logs
+- Limpa task logs antigos
+- Inicia scrub do ZFS
+- Verifica espaço em disco
+- Lista atualizações
+
+**Para agendar:**
+\`crontab -e\`
+\`0 3 * * * /root/maintenance.sh\``,
   },
 ];
