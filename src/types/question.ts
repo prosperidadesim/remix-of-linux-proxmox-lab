@@ -1,128 +1,85 @@
 export type Difficulty = 'Easy' | 'Medium' | 'Hard';
-export type ROSVersion = 'v6' | 'v7' | 'ambos';
 
-// Todas as certificações MikroTik
-export type Certification = 
-  | 'MTCNA'   // MikroTik Certified Network Associate
-  | 'MTCRE'   // MikroTik Certified Routing Engineer
-  | 'MTCWE'   // MikroTik Certified Wireless Engineer
-  | 'MTCTCE'  // MikroTik Certified Traffic Control Engineer
-  | 'MTCUME'  // MikroTik Certified User Management Engineer
-  | 'MTCSE'   // MikroTik Certified Security Engineer
-  | 'MTCIPv6' // MikroTik Certified IPv6 Engineer
-  | 'MTCINE'  // MikroTik Certified Inter-networking Engineer
-  | 'MTCEWE'  // MikroTik Certified Enterprise Wireless Engineer
-  | 'MTCSWE'; // MikroTik Certified Switching Engineer
+// Novas trilhas: Linux Essentials + Proxmox VE
+export type Track = 'Linux Essentials' | 'Proxmox VE';
 
-export interface CertificationInfo {
-  id: Certification;
+// Informações das trilhas
+export interface TrackInfo {
+  id: Track;
   nome: string;
   descricao: string;
-  prerequisito: Certification | null;
-  duracao: string;
-  topicos: string[];
   cor: string;
+  icone: string;
 }
 
-export const CERTIFICATIONS: CertificationInfo[] = [
+export const TRACKS: TrackInfo[] = [
   {
-    id: 'MTCNA',
-    nome: 'MikroTik Certified Network Associate',
-    descricao: 'Certificação básica que cobre os fundamentos do RouterOS e configuração de redes.',
-    prerequisito: null,
-    duracao: '3 dias',
-    topicos: ['RouterOS Basics', 'DHCP', 'Bridging', 'Routing', 'Wireless', 'Firewall', 'QoS', 'Tunnels', 'Misc'],
-    cor: 'hsl(200, 80%, 50%)',
+    id: 'Linux Essentials',
+    nome: 'Linux Essentials',
+    descricao: 'Fundamentos do Linux: linha de comando, sistema de arquivos, permissões e administração básica.',
+    cor: 'hsl(45, 90%, 50%)', // Amarelo/Dourado Linux
+    icone: 'Terminal',
   },
   {
-    id: 'MTCRE',
-    nome: 'MikroTik Certified Routing Engineer',
-    descricao: 'Foco em roteamento estático e dinâmico (OSPF, BGP, RIP).',
-    prerequisito: 'MTCNA',
-    duracao: '2 dias',
-    topicos: ['Static Routing', 'OSPF', 'BGP', 'RIP', 'MME', 'Routing Filters', 'VRF'],
-    cor: 'hsl(280, 70%, 50%)',
-  },
-  {
-    id: 'MTCWE',
-    nome: 'MikroTik Certified Wireless Engineer',
-    descricao: 'Especialização em redes wireless 802.11 com equipamentos MikroTik.',
-    prerequisito: 'MTCNA',
-    duracao: '2 dias',
-    topicos: ['Wireless Fundamentals', '802.11 Standards', 'WDS', 'Nstreme', 'NV2', 'CAPsMAN', 'Wireless Security'],
-    cor: 'hsl(170, 70%, 45%)',
-  },
-  {
-    id: 'MTCTCE',
-    nome: 'MikroTik Certified Traffic Control Engineer',
-    descricao: 'Controle de tráfego, QoS, filas e gerenciamento de banda.',
-    prerequisito: 'MTCNA',
-    duracao: '2 dias',
-    topicos: ['HTB', 'Simple Queues', 'Queue Tree', 'Mangle', 'Burst', 'PCQ', 'Traffic Prioritization'],
-    cor: 'hsl(30, 80%, 55%)',
-  },
-  {
-    id: 'MTCUME',
-    nome: 'MikroTik Certified User Management Engineer',
-    descricao: 'Gerenciamento de usuários, Hotspot, RADIUS e autenticação.',
-    prerequisito: 'MTCNA',
-    duracao: '2 dias',
-    topicos: ['User Manager', 'RADIUS', 'Hotspot', 'PPPoE', 'Profiles', 'Accounting', 'Walled Garden'],
-    cor: 'hsl(340, 70%, 55%)',
-  },
-  {
-    id: 'MTCSE',
-    nome: 'MikroTik Certified Security Engineer',
-    descricao: 'Segurança de rede, firewall avançado, VPNs e proteção contra ataques.',
-    prerequisito: 'MTCNA',
-    duracao: '2 dias',
-    topicos: ['Firewall Advanced', 'Attack Prevention', 'VPN Security', 'IPsec', 'Certificates', 'Port Knocking', 'Secure Protocols'],
-    cor: 'hsl(0, 70%, 55%)',
-  },
-  {
-    id: 'MTCIPv6',
-    nome: 'MikroTik Certified IPv6 Engineer',
-    descricao: 'Implementação e gerenciamento de redes IPv6.',
-    prerequisito: 'MTCNA',
-    duracao: '2 dias',
-    topicos: ['IPv6 Fundamentals', 'DHCPv6', 'SLAAC', 'IPv6 Routing', 'Dual Stack', 'Tunneling 6to4', 'IPv6 Firewall'],
-    cor: 'hsl(220, 70%, 55%)',
-  },
-  {
-    id: 'MTCINE',
-    nome: 'MikroTik Certified Inter-networking Engineer',
-    descricao: 'Integração avançada de redes, MPLS, Traffic Engineering.',
-    prerequisito: 'MTCRE',
-    duracao: '2 dias',
-    topicos: ['MPLS', 'VPLS', 'Traffic Engineering', 'BGP Advanced', 'Route Reflection', 'ECMP', 'Load Balancing'],
-    cor: 'hsl(260, 70%, 55%)',
-  },
-  {
-    id: 'MTCEWE',
-    nome: 'MikroTik Certified Enterprise Wireless Engineer',
-    descricao: 'Wireless empresarial com WiFi 6 (802.11ax) e alta densidade.',
-    prerequisito: 'MTCWE',
-    duracao: '2 dias',
-    topicos: ['WiFi 6', '802.11ax', 'High Density', 'Enterprise CAPsMAN', 'Roaming', 'Band Steering', 'Wireless Optimization'],
-    cor: 'hsl(150, 70%, 45%)',
-  },
-  {
-    id: 'MTCSWE',
-    nome: 'MikroTik Certified Switching Engineer',
-    descricao: 'Switching L2/L3, VLANs, STP, LACP com switches MikroTik.',
-    prerequisito: 'MTCNA',
-    duracao: '2 dias',
-    topicos: ['VLANs', 'STP/RSTP', 'LACP', 'Port Isolation', 'Switch Chip', 'L3 Switching', 'IGMP Snooping'],
-    cor: 'hsl(45, 80%, 50%)',
+    id: 'Proxmox VE',
+    nome: 'Proxmox Virtual Environment',
+    descricao: 'Virtualização com Proxmox: KVM, LXC, storage, networking, backup e alta disponibilidade.',
+    cor: 'hsl(27, 100%, 45%)', // Proxmox Orange
+    icone: 'Server',
   },
 ];
 
-export interface PythonAPIExample {
-  titulo: string;
-  descricao: string;
-  codigo: string;
-  saida?: string;
-}
+// Domínios por trilha (baseados nos syllabus oficiais)
+export const DOMAINS_BY_TRACK: Record<Track, { code: string; name: string; weight: number }[]> = {
+  'Linux Essentials': [
+    { code: '1', name: 'The Linux Community and a Career in Open Source', weight: 7 },
+    { code: '2', name: 'Finding Your Way on a Linux System', weight: 9 },
+    { code: '3', name: 'The Power of the Command Line', weight: 9 },
+    { code: '4', name: 'The Linux Operating System', weight: 8 },
+    { code: '5', name: 'Security and File Permissions', weight: 7 },
+  ],
+  'Proxmox VE': [
+    { code: '1', name: 'Installation and Configuration', weight: 10 },
+    { code: '2', name: 'Virtual Machines (KVM)', weight: 15 },
+    { code: '3', name: 'Containers (LXC)', weight: 12 },
+    { code: '4', name: 'Storage Management', weight: 12 },
+    { code: '5', name: 'Networking', weight: 10 },
+    { code: '6', name: 'Backup and Restore', weight: 12 },
+    { code: '7', name: 'High Availability and Clustering', weight: 10 },
+    { code: '8', name: 'Proxmox Backup Server', weight: 9 },
+  ],
+};
+
+// Categorias por trilha (para compatibilidade)
+export const CATEGORIES_BY_TRACK: Record<Track, string[]> = {
+  'Linux Essentials': [
+    'Comunidade Linux',
+    'Navegação no Sistema',
+    'Linha de Comando',
+    'Sistema Operacional',
+    'Segurança e Permissões',
+    'Shell Scripting',
+    'Gerenciamento de Arquivos',
+    'Processos',
+    'Editores de Texto',
+    'Rede Básica',
+  ],
+  'Proxmox VE': [
+    'Instalação e Configuração',
+    'Máquinas Virtuais (KVM)',
+    'Containers (LXC)',
+    'Storage',
+    'Networking',
+    'Backup e Restore',
+    'Alta Disponibilidade',
+    'Proxmox Backup Server',
+    'CLI e API',
+    'Troubleshooting',
+  ],
+};
+
+// Todas as categorias únicas
+export const CATEGORIES = [...new Set(Object.values(CATEGORIES_BY_TRACK).flat())];
 
 export interface OfficialLink {
   titulo: string;
@@ -131,24 +88,53 @@ export interface OfficialLink {
 
 export interface Question {
   id: string;
-  certificacao: Certification;
-  categoria: string;
+  track: Track;
+  domain: string;           // Código do domínio "1", "2", etc.
+  domainName: string;       // Nome do domínio
+  objective: string;        // Código do objetivo "1.1", "1.2", etc.
+  objectiveTitle: string;   // Título do objetivo
+  categoria: string;        // Categoria para filtros
   dificuldade: Difficulty;
   pergunta: string;
+  tipo: 'single' | 'multiple' | 'drag-drop';
   opcoes: string[];
-  corretaIndex: number;
+  corretaIndex: number | number[];  // Suporte a múltiplas respostas
   explicacaoCorreta: string;
   explicacoesPorOpcao: string[];
   linksOficiais: OfficialLink[];
   tags: string[];
-  rosVersion: ROSVersion;
   comandoRelacionado?: string;
-  pythonAPI?: PythonAPIExample;
 }
+
+// Tipos legados para compatibilidade
+export type Certification = Track;
+export type ROSVersion = 'v6' | 'v7' | 'ambos';
+
+export interface CertificationInfo {
+  id: Track;
+  nome: string;
+  descricao: string;
+  prerequisito: Track | null;
+  duracao: string;
+  topicos: string[];
+  cor: string;
+}
+
+export const CERTIFICATIONS: CertificationInfo[] = TRACKS.map(t => ({
+  id: t.id,
+  nome: t.nome,
+  descricao: t.descricao,
+  prerequisito: null,
+  duracao: 'Self-paced',
+  topicos: CATEGORIES_BY_TRACK[t.id],
+  cor: t.cor,
+}));
+
+export const CATEGORIES_BY_CERTIFICATION = CATEGORIES_BY_TRACK as Record<Track, string[]>;
 
 export interface UserAnswer {
   questionId: string;
-  selectedIndex: number;
+  selectedIndex: number | number[];
   isCorrect: boolean;
   timestamp: number;
   mode: 'study' | 'exam';
@@ -163,8 +149,13 @@ export interface StudyProgress {
   markedForReview: string[];
   lastStudyDate: number;
   streak: number;
+  xp: number;
+  level: number;
   categoryProgress: Record<string, { correct: number; total: number }>;
-  certificationProgress: Record<Certification, { correct: number; total: number }>;
+  trackProgress: Record<Track, { correct: number; total: number }>;
+  domainProgress: Record<string, { correct: number; total: number }>;
+  // Legacy compatibility
+  certificationProgress?: Record<Track, { correct: number; total: number }>;
 }
 
 export interface ExamResult {
@@ -177,7 +168,7 @@ export interface ExamResult {
   answers: UserAnswer[];
   mode: 'prova' | 'treino';
   timeLimit?: number;
-  certification?: Certification;
+  track?: Track;
 }
 
 export interface StudySession {
@@ -189,133 +180,70 @@ export interface StudySession {
 }
 
 export interface QuestionFilters {
-  certificacoes: Certification[];
+  tracks: Track[];
   categorias: string[];
   dificuldades: Difficulty[];
   tags: string[];
-  rosVersion: ROSVersion | 'todos';
+  domains: string[];
   apenasNaoRespondidas: boolean;
   apenasErradas: boolean;
-  apenasComPythonAPI: boolean;
+  // Legacy compatibility
+  certificacoes?: Track[];
+  rosVersion?: string;
+  apenasComPythonAPI?: boolean;
 }
 
-// Categorias por certificação
-export const CATEGORIES_BY_CERTIFICATION: Record<Certification, string[]> = {
-  MTCNA: [
-    'Introdução ao MikroTik',
-    'DHCP',
-    'Bridging',
-    'Routing',
-    'Wireless',
-    'Firewall',
-    'QoS',
-    'Tunnels',
-    'Misc',
-    'Hotspot',
-    'Ferramentas',
-  ],
-  MTCRE: [
-    'Static Routing',
-    'OSPF',
-    'BGP',
-    'RIP',
-    'MME',
-    'Routing Filters',
-    'VRF',
-    'Route Redistribution',
-  ],
-  MTCWE: [
-    'Wireless Fundamentals',
-    '802.11 Standards',
-    'WDS',
-    'Nstreme',
-    'NV2',
-    'CAPsMAN',
-    'Wireless Security',
-    'Troubleshooting',
-  ],
-  MTCTCE: [
-    'HTB',
-    'Simple Queues',
-    'Queue Tree',
-    'Mangle',
-    'Burst',
-    'PCQ',
-    'Traffic Prioritization',
-    'Connection Tracking',
-  ],
-  MTCUME: [
-    'User Manager',
-    'RADIUS',
-    'Hotspot Advanced',
-    'PPPoE',
-    'Profiles',
-    'Accounting',
-    'Walled Garden',
-    'Vouchers',
-  ],
-  MTCSE: [
-    'Firewall Advanced',
-    'Attack Prevention',
-    'VPN Security',
-    'IPsec',
-    'Certificates',
-    'Port Knocking',
-    'Secure Protocols',
-    'Intrusion Detection',
-  ],
-  MTCIPv6: [
-    'IPv6 Fundamentals',
-    'DHCPv6',
-    'SLAAC',
-    'IPv6 Routing',
-    'Dual Stack',
-    'Tunneling',
-    'IPv6 Firewall',
-    'IPv6 DNS',
-  ],
-  MTCINE: [
-    'MPLS',
-    'VPLS',
-    'Traffic Engineering',
-    'BGP Advanced',
-    'Route Reflection',
-    'ECMP',
-    'Load Balancing',
-    'L2VPN/L3VPN',
-  ],
-  MTCEWE: [
-    'WiFi 6',
-    '802.11ax',
-    'High Density',
-    'Enterprise CAPsMAN',
-    'Roaming',
-    'Band Steering',
-    'Wireless Optimization',
-    'Enterprise Security',
-  ],
-  MTCSWE: [
-    'VLANs',
-    'STP/RSTP',
-    'LACP',
-    'Port Isolation',
-    'Switch Chip',
-    'L3 Switching',
-    'IGMP Snooping',
-    'Port Security',
-  ],
-};
-
-// Todas as categorias únicas
-export const CATEGORIES = [...new Set(Object.values(CATEGORIES_BY_CERTIFICATION).flat())];
-
 export const DEFAULT_FILTERS: QuestionFilters = {
-  certificacoes: [],
+  tracks: [],
   categorias: [],
   dificuldades: [],
   tags: [],
-  rosVersion: 'todos',
+  domains: [],
   apenasNaoRespondidas: false,
   apenasErradas: false,
-  apenasComPythonAPI: false,
+  certificacoes: [],
 };
+
+// Gamification
+export const LEVELS = [
+  { level: 1, title: 'Iniciante', xpRequired: 0, icon: '🌱' },
+  { level: 2, title: 'Aprendiz', xpRequired: 100, icon: '📚' },
+  { level: 3, title: 'Junior Sysadmin', xpRequired: 300, icon: '💻' },
+  { level: 4, title: 'Sysadmin', xpRequired: 600, icon: '🖥️' },
+  { level: 5, title: 'Senior Sysadmin', xpRequired: 1000, icon: '⚙️' },
+  { level: 6, title: 'DevOps Engineer', xpRequired: 1500, icon: '🚀' },
+  { level: 7, title: 'Arquiteto de Infraestrutura', xpRequired: 2500, icon: '🏗️' },
+  { level: 8, title: 'Mestre da Infraestrutura', xpRequired: 4000, icon: '👑' },
+];
+
+export const XP_REWARDS = {
+  questionCorrect: 10,
+  questionFirstTry: 5,
+  labComplete: 50,
+  labFirstTry: 25,
+  streakDay: 20,
+  perfectExam: 100,
+};
+
+export function getLevelInfo(xp: number) {
+  let currentLevel = LEVELS[0];
+  for (const level of LEVELS) {
+    if (xp >= level.xpRequired) {
+      currentLevel = level;
+    } else {
+      break;
+    }
+  }
+  const nextLevel = LEVELS.find(l => l.xpRequired > xp) || currentLevel;
+  const xpToNext = nextLevel.xpRequired - xp;
+  const xpInLevel = xp - currentLevel.xpRequired;
+  const xpForLevel = nextLevel.xpRequired - currentLevel.xpRequired;
+  const progress = xpForLevel > 0 ? (xpInLevel / xpForLevel) * 100 : 100;
+  
+  return {
+    ...currentLevel,
+    nextLevel,
+    xpToNext,
+    progress,
+  };
+}

@@ -181,7 +181,7 @@ export default function Index() {
           animate={{ opacity: 1, y: 0 }}
           className="text-center"
         >
-          <h1 className="text-3xl md:text-4xl font-bold mb-2">Bem-vindo ao MikroTik Study Lab</h1>
+          <h1 className="text-3xl md:text-4xl font-bold mb-2">Bem-vindo ao Infra Study Lab</h1>
           <p className="text-muted-foreground">
             {selectedCertifications.length > 0 
               ? `Estudando: ${selectedCertifications.join(', ')}`
@@ -231,7 +231,7 @@ export default function Index() {
                     )}
                     <div className="font-bold text-sm">{cert.id}</div>
                     <div className="text-xs text-muted-foreground mt-1 line-clamp-1">
-                      {cert.nome.replace('MikroTik Certified ', '')}
+                      {cert.nome}
                     </div>
                     <Badge 
                       variant="secondary" 

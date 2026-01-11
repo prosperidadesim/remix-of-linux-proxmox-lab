@@ -17,7 +17,7 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [showApiConfig, setShowApiConfig] = useState(false);
   const [customApiUrl, setCustomApiUrl] = useState(
-    localStorage.getItem('mikrotik-api-url') || ''
+    localStorage.getItem('infra-study-api-url') || ''
   );
   
   const { login, apiUrl } = useAuth();
@@ -51,9 +51,9 @@ export default function Login() {
 
   const handleSaveApiUrl = () => {
     if (customApiUrl.trim()) {
-      localStorage.setItem('mikrotik-api-url', customApiUrl.trim());
+      localStorage.setItem('infra-study-api-url', customApiUrl.trim());
     } else {
-      localStorage.removeItem('mikrotik-api-url');
+      localStorage.removeItem('infra-study-api-url');
     }
     window.location.reload();
   };
@@ -82,8 +82,8 @@ export default function Login() {
         className="w-full max-w-md"
       >
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gradient">MikroTik Study Lab</h1>
-          <p className="text-muted-foreground mt-2">Plataforma de estudos para certificações</p>
+          <h1 className="text-3xl font-bold text-gradient">Infra Study Lab</h1>
+          <p className="text-muted-foreground mt-2">Linux + Proxmox • Plataforma de estudos</p>
         </div>
 
         <Card>

@@ -58,8 +58,8 @@ export function Sidebar() {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="p-6 border-b border-sidebar-border">
-            <h1 className="text-xl font-bold text-gradient">MikroTik Study Lab</h1>
-            <p className="text-sm text-muted-foreground mt-1">MTCNA Prep</p>
+            <h1 className="text-xl font-bold text-gradient">Infra Study Lab</h1>
+            <p className="text-sm text-muted-foreground mt-1">Linux + Proxmox</p>
           </div>
 
           {/* Navigation */}
@@ -122,7 +122,7 @@ export function Sidebar() {
               Sair
             </Button>
             <div className="text-xs text-muted-foreground text-center mt-3">
-              v1.0.0 • RouterOS v6/v7
+              v2.0.0 • Linux + Proxmox VE
             </div>
           </div>
         </div>

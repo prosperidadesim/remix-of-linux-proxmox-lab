@@ -10,7 +10,7 @@ const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-const JWT_SECRET = process.env.JWT_SECRET || 'mikrotik-study-secret-key-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET || 'infra-study-secret-key-change-in-production';
 // URL base usada para links (ex.: reset de senha). Em produção, defina APP_URL.
 const APP_URL = process.env.APP_URL || `http://localhost:${PORT}`;
 const DB_PATH = path.join(__dirname, 'database.sqlite');
@@ -20,7 +20,7 @@ const SMTP_HOST = process.env.SMTP_HOST || 'smtp.gmail.com';
 const SMTP_PORT = process.env.SMTP_PORT || 587;
 const SMTP_USER = process.env.SMTP_USER || '';
 const SMTP_PASS = process.env.SMTP_PASS || '';
-const SMTP_FROM = process.env.SMTP_FROM || 'MikroTik Study Lab <noreply@local>';
+const SMTP_FROM = process.env.SMTP_FROM || 'Infra Study Lab <noreply@local>';
 
 // Transporter de email (só funciona se SMTP estiver configurado)
 let transporter = null;
@@ -340,16 +340,16 @@ async function startServer() {
         await transporter.sendMail({
           from: SMTP_FROM,
           to: user.email,
-          subject: 'Recuperação de Senha - MikroTik Study Lab',
+          subject: 'Recuperação de Senha - Infra Study Lab',
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2 style="color: #333;">Recuperação de Senha</h2>
+              <h2 style="color: #E57000;">Recuperação de Senha</h2>
               <p>Olá <strong>${user.display_name}</strong>,</p>
-              <p>Recebemos uma solicitação para redefinir sua senha no MikroTik Study Lab.</p>
+              <p>Recebemos uma solicitação para redefinir sua senha no Infra Study Lab.</p>
               <p>Clique no botão abaixo para criar uma nova senha:</p>
               <p style="text-align: center; margin: 30px 0;">
                 <a href="${resetLink}" 
-                   style="background-color: #0066cc; color: white; padding: 12px 24px; 
+                   style="background-color: #E57000; color: white; padding: 12px 24px; 
                           text-decoration: none; border-radius: 6px; display: inline-block;">
                   Redefinir Senha
                 </a>
@@ -361,7 +361,7 @@ async function startServer() {
               <p><strong>Este link expira em 1 hora.</strong></p>
               <p>Se você não solicitou esta recuperação, ignore este email.</p>
               <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-              <p style="color: #888; font-size: 12px;">MikroTik Study Lab</p>
+              <p style="color: #888; font-size: 12px;">Infra Study Lab - Linux + Proxmox</p>
             </div>
           `,
         });
