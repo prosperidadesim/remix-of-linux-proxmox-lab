@@ -24,14 +24,19 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 // URL da API - pode ser configurada via localStorage ou usar padrão
 const getApiUrl = () => {
   const saved = localStorage.getItem('mikrotik-api-url');
-  if (saved) return saved;
-  
-  // Em desenvolvimento (Lovable preview ou localhost), usa a URL do preview com /api
-  // O backend deve estar rodando localmente na porta 3001
-  if (window.location.hostname === 'localhost' || window.location.hostname.includes('lovableproject.com')) {
-    // Por padrão, tenta conectar ao backend local
-    return 'http://localhost:3001';
+  if (saved) return saved.replace(/\/+$/, '');
+
+  // No preview hospedado, a API (quando existir) está na mesma origem
+  if (window.location.hostname.includes('lovableproject.com')) {
+    return window.location.origin;
   }
+
+  // Em desenvolvimento local com Vite proxy, usamos a mesma origem ("/api")
+  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    return '';
+  }
+
+  // Produção: assume /api na mesma origem (via proxy/reverse-proxy)
   return window.location.origin;
 };
 
