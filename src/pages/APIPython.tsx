@@ -107,9 +107,9 @@ export default function APIPython() {
         {/* Header */}
         <div className="flex flex-col gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gradient">API Python RouterOS</h1>
+            <h1 className="text-3xl font-bold text-gradient">API Python Proxmox VE</h1>
             <p className="text-muted-foreground mt-1">
-              Exemplos de código para automação com librouteros
+              Exemplos de código para automação com proxmoxer
             </p>
           </div>
 
@@ -119,12 +119,12 @@ export default function APIPython() {
               <div className="flex items-center gap-4 flex-wrap">
                 <div className="flex items-center gap-2">
                   <Terminal className="h-5 w-5 text-primary" />
-                  <span className="font-mono text-sm">pip install librouteros</span>
+                  <span className="font-mono text-sm">pip install proxmoxer requests</span>
                 </div>
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => copyToClipboard('pip install librouteros', 'install')}
+                  onClick={() => copyToClipboard('pip install proxmoxer requests', 'install')}
                 >
                   {copiedId === 'install' ? (
                     <Check className="h-4 w-4" />
@@ -133,7 +133,7 @@ export default function APIPython() {
                   )}
                 </Button>
                 <a
-                  href="https://pypi.org/project/librouteros/"
+                  href="https://pypi.org/project/proxmoxer/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-primary hover:underline text-sm flex items-center gap-1 ml-auto"
@@ -346,31 +346,31 @@ export default function APIPython() {
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               <a
-                href="https://help.mikrotik.com/docs/display/ROS/API"
+                href="https://pve.proxmox.com/pve-docs/api-viewer/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 p-3 rounded-lg border hover:border-primary/50 hover:bg-primary/5 transition-colors"
               >
                 <ExternalLink className="h-4 w-4 text-primary" />
-                <span className="text-sm">Documentação API RouterOS</span>
+                <span className="text-sm">Documentação API Proxmox</span>
               </a>
               <a
-                href="https://pypi.org/project/librouteros/"
+                href="https://pypi.org/project/proxmoxer/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 p-3 rounded-lg border hover:border-primary/50 hover:bg-primary/5 transition-colors"
               >
                 <ExternalLink className="h-4 w-4 text-primary" />
-                <span className="text-sm">librouteros no PyPI</span>
+                <span className="text-sm">proxmoxer no PyPI</span>
               </a>
               <a
-                href="https://github.com/luqasz/librouteros"
+                href="https://github.com/proxmoxer/proxmoxer"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 p-3 rounded-lg border hover:border-primary/50 hover:bg-primary/5 transition-colors"
               >
                 <ExternalLink className="h-4 w-4 text-primary" />
-                <span className="text-sm">GitHub librouteros</span>
+                <span className="text-sm">GitHub proxmoxer</span>
               </a>
             </div>
           </CardContent>
