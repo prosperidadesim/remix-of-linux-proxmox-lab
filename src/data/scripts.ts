@@ -424,7 +424,7 @@ else
   TYPE="hourly"
 fi
 
-SNAP_NAME="$DATASET@${TYPE}_$DATE"
+SNAP_NAME="$DATASET@\${TYPE}_$DATE"
 
 # Criar snapshot
 echo "Criando snapshot: $SNAP_NAME"
@@ -435,7 +435,7 @@ cleanup_snapshots() {
   local pattern=$1
   local keep=$2
   
-  zfs list -t snapshot -o name -s creation | grep "$DATASET@${pattern}" | head -n -$keep | while read snap; do
+  zfs list -t snapshot -o name -s creation | grep "$DATASET@\${pattern}" | head -n -$keep | while read snap; do
     echo "Removendo: $snap"
     zfs destroy $snap
   done
