@@ -4,6 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { OfflineProvider } from "@/contexts/OfflineContext";
+import { OfflineBanner } from "@/components/OfflineBanner";
 import Index from "./pages/Index";
 import Simulado from "./pages/Simulado";
 import Revisao from "./pages/Revisao";
@@ -58,26 +60,31 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function AppRoutes() {
+function AppContent() {
   const { isAuthenticated } = useAuth();
   
   return (
-    <Routes>
-      <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} />
-      <Route path="/forgot-password" element={isAuthenticated ? <Navigate to="/" replace /> : <ForgotPassword />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
-      <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-      <Route path="/simulado" element={<ProtectedRoute><Simulado /></ProtectedRoute>} />
-      <Route path="/revisao" element={<ProtectedRoute><Revisao /></ProtectedRoute>} />
-      <Route path="/banco" element={<ProtectedRoute><BancoQuestoes /></ProtectedRoute>} />
-      <Route path="/api-python" element={<ProtectedRoute><APIPython /></ProtectedRoute>} />
-      <Route path="/estatisticas" element={<ProtectedRoute><Estatisticas /></ProtectedRoute>} />
-      <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
-      <Route path="/scripts" element={<ProtectedRoute><Scripts /></ProtectedRoute>} />
-      <Route path="/ajuda" element={<ProtectedRoute><Ajuda /></ProtectedRoute>} />
-      <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+    <>
+      {/* Offline banner appears on all pages when offline */}
+      <OfflineBanner />
+      
+      <Routes>
+        <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <Login />} />
+        <Route path="/forgot-password" element={isAuthenticated ? <Navigate to="/" replace /> : <ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+        <Route path="/simulado" element={<ProtectedRoute><Simulado /></ProtectedRoute>} />
+        <Route path="/revisao" element={<ProtectedRoute><Revisao /></ProtectedRoute>} />
+        <Route path="/banco" element={<ProtectedRoute><BancoQuestoes /></ProtectedRoute>} />
+        <Route path="/api-python" element={<ProtectedRoute><APIPython /></ProtectedRoute>} />
+        <Route path="/estatisticas" element={<ProtectedRoute><Estatisticas /></ProtectedRoute>} />
+        <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
+        <Route path="/scripts" element={<ProtectedRoute><Scripts /></ProtectedRoute>} />
+        <Route path="/ajuda" element={<ProtectedRoute><Ajuda /></ProtectedRoute>} />
+        <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </>
   );
 }
 
@@ -88,7 +95,9 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <AppRoutes />
+          <OfflineProvider>
+            <AppContent />
+          </OfflineProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
