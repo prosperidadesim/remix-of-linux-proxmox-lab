@@ -752,7 +752,7 @@ async function startServer() {
     console.log(`║  🌐 Servidor rodando em: http://0.0.0.0:${PORT}       ║`);
     console.log('║  👤 Login padrão: admin / admin123                 ║');
     console.log('║  💾 Banco de dados: database.sqlite                ║');
-    console.log('║  📧 Email SMTP: ' + (emailTransporter ? '✅ Configurado' : '❌ Não configurado').padEnd(35) + '║');
+    console.log('║  📧 Email SMTP: ' + (transporter ? '✅ Configurado' : '❌ Não configurado').padEnd(35) + '║');
     console.log('╚════════════════════════════════════════════════════╝');
     console.log('');
   });
