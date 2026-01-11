@@ -23,7 +23,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // URL da API - pode ser configurada via localStorage ou usar padrão
 const getApiUrl = () => {
-  const saved = localStorage.getItem('mikrotik-api-url');
+  const saved = localStorage.getItem('infra-study-api-url');
   if (saved) return saved.replace(/\/+$/, '');
 
   // No preview hospedado, a API (quando existir) está na mesma origem
@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [apiUrl] = useState(getApiUrl);
 
   useEffect(() => {
-    const savedToken = localStorage.getItem('mikrotik-token');
+    const savedToken = localStorage.getItem('infra-study-token');
     if (savedToken) {
       setToken(savedToken);
       validateToken(savedToken);
@@ -69,14 +69,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(userData);
       } else {
         console.log('Token inválido, removendo...');
-        localStorage.removeItem('mikrotik-token');
+        localStorage.removeItem('infra-study-token');
         setToken(null);
       }
     } catch (error) {
       console.error('Erro ao validar token (backend offline?):', error);
       // Em caso de erro de rede, tenta usar os dados salvos do usuário
       // para permitir navegação enquanto o backend está offline
-      const savedUser = localStorage.getItem('mikrotik-user');
+      const savedUser = localStorage.getItem('infra-study-user');
       if (savedUser) {
         try {
           setUser(JSON.parse(savedUser));
@@ -104,15 +104,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const data = await response.json();
     setToken(data.token);
     setUser(data.user);
-    localStorage.setItem('mikrotik-token', data.token);
-    localStorage.setItem('mikrotik-user', JSON.stringify(data.user));
+    localStorage.setItem('infra-study-token', data.token);
+    localStorage.setItem('infra-study-user', JSON.stringify(data.user));
   };
 
   const logout = () => {
     setToken(null);
     setUser(null);
-    localStorage.removeItem('mikrotik-token');
-    localStorage.removeItem('mikrotik-user');
+    localStorage.removeItem('infra-study-token');
+    localStorage.removeItem('infra-study-user');
   };
 
   return (
