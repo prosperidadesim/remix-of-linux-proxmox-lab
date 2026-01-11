@@ -11,7 +11,8 @@ const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET || 'mikrotik-study-secret-key-change-in-production';
-const APP_URL = process.env.APP_URL || 'http://localhost:5173';
+// URL base usada para links (ex.: reset de senha). Em produção, defina APP_URL.
+const APP_URL = process.env.APP_URL || `http://localhost:${PORT}`;
 const DB_PATH = path.join(__dirname, 'database.sqlite');
 
 // Configuração de email (configure com suas credenciais SMTP)
@@ -617,35 +618,73 @@ async function startServer() {
 
   // Estatísticas gerais (admin)
   app.get('/api/admin/stats', authenticate, requireAdmin, (req, res) => {
-    const totalUsers = queryOne('SELECT COUNT(*) as count FROM users');
-    const activeToday = queryOne(`
-      SELECT COUNT(DISTINCT user_id) as count FROM user_answers 
-      WHERE timestamp > ?
-    `, [Date.now() - 24 * 60 * 60 * 1000]);
-    
-    const totalAnswers = queryOne('SELECT COUNT(*) as count FROM user_answers');
-    const correctAnswers = queryOne('SELECT COUNT(*) as count FROM user_answers WHERE is_correct = 1');
-    
-    // Atividade por dia (últimos 7 dias)
+    const totalUsersRow = queryOne('SELECT COUNT(*) as count FROM users');
+
+    // Usuários ativos nos últimos 7 dias
     const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-    const recentActivity = queryAll(`
-      SELECT timestamp FROM user_answers WHERE timestamp > ?
-    `, [sevenDaysAgo]);
-    
-    const dailyActivity = {};
+    const activeUsersRow = queryOne(
+      `SELECT COUNT(DISTINCT user_id) as count FROM user_answers WHERE timestamp > ?`,
+      [sevenDaysAgo]
+    );
+
+    const totalAnswersRow = queryOne('SELECT COUNT(*) as count FROM user_answers');
+    const correctAnswersRow = queryOne('SELECT COUNT(*) as count FROM user_answers WHERE is_correct = 1');
+
+    const totalUsers = Number(totalUsersRow?.count || 0);
+    const activeUsers = Number(activeUsersRow?.count || 0);
+    const totalAnswers = Number(totalAnswersRow?.count || 0);
+    const correctAnswers = Number(correctAnswersRow?.count || 0);
+
+    const globalAccuracy = totalAnswers > 0 ? Math.round((correctAnswers / totalAnswers) * 100) : 0;
+
+    // Atividade por dia (últimos 7 dias) — array no formato esperado pelo frontend
+    const recentActivity = queryAll(`SELECT timestamp FROM user_answers WHERE timestamp > ?`, [sevenDaysAgo]);
+    const dailyMap = new Map();
+
+    // Inicializa todos os dias para evitar buracos no gráfico
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+      const day = d.toISOString().split('T')[0];
+      dailyMap.set(day, 0);
+    }
+
     recentActivity.forEach(a => {
       const day = new Date(a.timestamp).toISOString().split('T')[0];
-      dailyActivity[day] = (dailyActivity[day] || 0) + 1;
+      dailyMap.set(day, (dailyMap.get(day) || 0) + 1);
     });
-    
+
+    const dailyActivity = Array.from(dailyMap.entries()).map(([date, count]) => ({ date, count }));
+
+    // Top usuários (por total de acertos)
+    const topUsersRows = queryAll(`
+      SELECT u.id, u.username, u.display_name,
+             COALESCE(p.total_answered, 0) as total_answered,
+             COALESCE(p.total_correct, 0) as total_correct,
+             COALESCE(p.total_incorrect, 0) as total_incorrect,
+             COALESCE(p.streak, 0) as streak
+      FROM users u
+      LEFT JOIN study_progress p ON u.id = p.user_id
+      ORDER BY total_correct DESC, total_answered DESC
+      LIMIT 10
+    `);
+
+    const topUsers = topUsersRows.map(u => ({
+      id: u.id,
+      displayName: u.display_name,
+      username: u.username,
+      totalAnswered: u.total_answered || 0,
+      totalCorrect: u.total_correct || 0,
+      streak: u.streak || 0,
+      accuracy: u.total_answered > 0 ? Math.round((u.total_correct / u.total_answered) * 100) : 0,
+    }));
+
     res.json({
-      totalUsers: totalUsers?.count || 0,
-      activeToday: activeToday?.count || 0,
-      totalAnswers: totalAnswers?.count || 0,
-      correctAnswers: correctAnswers?.count || 0,
-      globalAccuracy: totalAnswers?.count > 0 
-        ? Math.round((correctAnswers?.count / totalAnswers?.count) * 100) 
-        : 0,
+      totalUsers,
+      activeUsers,
+      totalAnswers,
+      correctAnswers,
+      globalAccuracy,
+      topUsers,
       dailyActivity,
     });
   });
@@ -736,12 +775,32 @@ async function startServer() {
 
   // Endpoint de health check para verificar se o servidor está online
   app.get('/api/health', (req, res) => {
-    res.json({ 
-      status: 'ok', 
+    res.json({
+      status: 'ok',
       message: 'Servidor online',
       timestamp: new Date().toISOString()
     });
   });
+
+  // ========== FRONTEND (SPA) ==========
+  // Se existir build do frontend (pasta "dist" na raiz do projeto), serve tudo pelo mesmo servidor/porta.
+  // Isso reduz erros de CORS e permite acessar /admin direto sem configurações extras.
+  const FRONTEND_DIST = path.join(__dirname, '..', 'dist');
+  const FRONTEND_INDEX = path.join(FRONTEND_DIST, 'index.html');
+
+  if (fs.existsSync(FRONTEND_INDEX)) {
+    app.use(express.static(FRONTEND_DIST));
+
+    // Fallback do React Router (mantém /api intacto)
+    app.get('*', (req, res, next) => {
+      if (req.path.startsWith('/api')) return next();
+      return res.sendFile(FRONTEND_INDEX);
+    });
+
+    console.log('✓ Frontend integrado (servindo dist/)');
+  } else {
+    console.log('⚠ Frontend não encontrado em dist/. Rode o build do frontend para servir junto ao backend.');
+  }
 
   // Inicia o servidor
   app.listen(PORT, '0.0.0.0', () => {
