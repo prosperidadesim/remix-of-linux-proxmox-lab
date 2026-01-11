@@ -11,7 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { Brain, Clock, Target, Trophy, ArrowRight, RotateCcw, CheckCircle2, XCircle, ExternalLink } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Question, ExamResult, CATEGORIES, Certification, CERTIFICATIONS } from '@/types/question';
+import { Question, ExamResult, CATEGORIES, Track, CERTIFICATIONS } from '@/types/question';
 import { cn } from '@/lib/utils';
 
 type ExamMode = 'setup' | 'running' | 'result';
@@ -22,22 +22,22 @@ export default function Simulado() {
   
   const [mode, setMode] = useState<ExamMode>('setup');
   const [examType, setExamType] = useState<ExamType>('prova');
-  const [selectedCertification, setSelectedCertification] = useState<Certification | 'all'>('all');
+  const [selectedTrack, setSelectedTrack] = useState<Track | 'all'>('all');
   const [questionCount, setQuestionCount] = useState(30);
   const [timeLimit, setTimeLimit] = useState(30);
   const [useTimer, setUseTimer] = useState(true);
 
-  // Filter questions by certification
+  // Filter questions by track
   const filteredQuestions = useMemo(() => {
-    if (selectedCertification === 'all') return questions;
-    return questions.filter(q => q.certificacao === selectedCertification);
-  }, [questions, selectedCertification]);
+    if (selectedTrack === 'all') return questions;
+    return questions.filter(q => q.track === selectedTrack);
+  }, [questions, selectedTrack]);
 
-  // Count questions by certification
-  const questionCountByCert = useMemo(() => {
+  // Count questions by track
+  const questionCountByTrack = useMemo(() => {
     const counts: Record<string, number> = { all: questions.length };
     CERTIFICATIONS.forEach(cert => {
-      counts[cert.id] = questions.filter(q => q.certificacao === cert.id).length;
+      counts[cert.id] = questions.filter(q => q.track === cert.id).length;
     });
     return counts;
   }, [questions]);
@@ -161,8 +161,8 @@ export default function Simulado() {
   }, [result, examQuestions]);
 
   if (mode === 'setup') {
-    const selectedCertInfo = selectedCertification !== 'all' 
-      ? CERTIFICATIONS.find(c => c.id === selectedCertification) 
+    const selectedCertInfo = selectedTrack !== 'all' 
+      ? CERTIFICATIONS.find(c => c.id === selectedTrack) 
       : null;
 
     return (
@@ -187,25 +187,25 @@ export default function Simulado() {
             <CardContent>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                 <Button
-                  variant={selectedCertification === 'all' ? 'default' : 'outline'}
+                  variant={selectedTrack === 'all' ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => setSelectedCertification('all')}
+                  onClick={() => setSelectedTrack('all')}
                   className="justify-between"
                 >
                   <span>Todas</span>
-                  <Badge variant="secondary" className="ml-1">{questionCountByCert.all}</Badge>
+                  <Badge variant="secondary" className="ml-1">{questionCountByTrack.all}</Badge>
                 </Button>
                 {CERTIFICATIONS.map(cert => (
                   <Button
                     key={cert.id}
-                    variant={selectedCertification === cert.id ? 'default' : 'outline'}
+                    variant={selectedTrack === cert.id ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => setSelectedCertification(cert.id)}
+                    onClick={() => setSelectedTrack(cert.id)}
                     className="justify-between"
-                    disabled={questionCountByCert[cert.id] === 0}
+                    disabled={questionCountByTrack[cert.id] === 0}
                   >
                     <span>{cert.id}</span>
-                    <Badge variant="secondary" className="ml-1">{questionCountByCert[cert.id]}</Badge>
+                    <Badge variant="secondary" className="ml-1">{questionCountByTrack[cert.id]}</Badge>
                   </Button>
                 ))}
               </div>

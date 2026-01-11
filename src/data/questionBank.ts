@@ -1,39 +1,34 @@
 import { Question } from '@/types/question';
-import { mtcnaQuestions } from './questions/mtcna';
-import { mtcreQuestions } from './questions/mtcre';
-import { mtcweQuestions } from './questions/mtcwe';
-import { mtctceQuestions } from './questions/mtctce';
-import { mtcumeQuestions } from './questions/mtcume';
-import { mtcseQuestions } from './questions/mtcse';
-import { mtcipv6Questions } from './questions/mtcipv6';
-import { mtcineQuestions } from './questions/mtcine';
-import { mtceweQuestions } from './questions/mtcewe';
-import { mtcsweQuestions } from './questions/mtcswe';
+import { linuxEssentialsQuestions } from './questions/linux-essentials';
+import { proxmoxVEQuestions } from './questions/proxmox-ve';
 
-// Combinar todas as questões de todos os módulos
-export const initialQuestionBank: Question[] = [
-  ...mtcnaQuestions,
-  ...mtcreQuestions,
-  ...mtcweQuestions,
-  ...mtctceQuestions,
-  ...mtcumeQuestions,
-  ...mtcseQuestions,
-  ...mtcipv6Questions,
-  ...mtcineQuestions,
-  ...mtceweQuestions,
-  ...mtcsweQuestions,
+// Banco de questões consolidado - Infra Study Lab
+export const questionBank: Question[] = [
+  ...linuxEssentialsQuestions,
+  ...proxmoxVEQuestions,
 ];
 
-// Exportar questões por certificação para uso individual
+// Alias para compatibilidade com código legado
+export const initialQuestionBank = questionBank;
+
+// Exportar questões por trilha para uso individual
 export {
-  mtcnaQuestions,
-  mtcreQuestions,
-  mtcweQuestions,
-  mtctceQuestions,
-  mtcumeQuestions,
-  mtcseQuestions,
-  mtcipv6Questions,
-  mtcineQuestions,
-  mtceweQuestions,
-  mtcsweQuestions,
+  linuxEssentialsQuestions,
+  proxmoxVEQuestions,
 };
+
+// Estatísticas do banco
+export const bankStats = {
+  total: questionBank.length,
+  byTrack: {
+    'Linux Essentials': linuxEssentialsQuestions.length,
+    'Proxmox VE': proxmoxVEQuestions.length,
+  },
+  byDifficulty: {
+    Easy: questionBank.filter(q => q.dificuldade === 'Easy').length,
+    Medium: questionBank.filter(q => q.dificuldade === 'Medium').length,
+    Hard: questionBank.filter(q => q.dificuldade === 'Hard').length,
+  },
+};
+
+export default questionBank;

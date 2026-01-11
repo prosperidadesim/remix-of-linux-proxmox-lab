@@ -54,7 +54,7 @@ export function QuestionCard({ question, onAnswer, onNext, showFeedback = true }
         <div className="flex flex-wrap gap-2 mb-6">
           <Badge variant="secondary">{question.categoria}</Badge>
           <Badge className={difficultyClass}>{question.dificuldade}</Badge>
-          <Badge variant="outline">{question.rosVersion}</Badge>
+          <Badge variant="outline">{question.track}</Badge>
         </div>
 
         <h2 className="text-lg md:text-xl font-semibold mb-6">{question.pergunta}</h2>

@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { BookOpen, Brain, Target, Trophy, Flame, ArrowRight, Shuffle, Filter, Check, GraduationCap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CATEGORIES, DEFAULT_FILTERS, CERTIFICATIONS, Certification, CATEGORIES_BY_CERTIFICATION } from '@/types/question';
+import { CATEGORIES, DEFAULT_FILTERS, CERTIFICATIONS, Track, CATEGORIES_BY_TRACK } from '@/types/question';
 
 export default function Index() {
   const { questions, progress, recordAnswer, filterQuestions, isLoading } = useStudyStore();
@@ -19,46 +19,46 @@ export default function Index() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [studyQuestions, setStudyQuestions] = useState<typeof questions>([]);
   const [sessionStats, setSessionStats] = useState({ correct: 0, total: 0 });
-  const [selectedCertifications, setSelectedCertifications] = useState<Certification[]>([]);
+  const [selectedTracks, setSelectedTracks] = useState<Track[]>([]);
 
   const accuracy = progress.totalAnswered > 0 
     ? Math.round((progress.totalCorrect / progress.totalAnswered) * 100) 
     : 0;
 
-  // Filter questions based on selected certifications
+  // Filter questions based on selected tracks
   const availableQuestions = useMemo(() => {
-    if (selectedCertifications.length === 0) {
+    if (selectedTracks.length === 0) {
       return questions;
     }
-    return questions.filter(q => selectedCertifications.includes(q.certificacao));
-  }, [questions, selectedCertifications]);
+    return questions.filter(q => selectedTracks.includes(q.track));
+  }, [questions, selectedTracks]);
 
-  // Get categories for selected certifications
+  // Get categories for selected tracks
   const relevantCategories = useMemo(() => {
-    if (selectedCertifications.length === 0) {
+    if (selectedTracks.length === 0) {
       return CATEGORIES;
     }
     const cats = new Set<string>();
-    selectedCertifications.forEach(cert => {
-      CATEGORIES_BY_CERTIFICATION[cert]?.forEach(cat => cats.add(cat));
+    selectedTracks.forEach(track => {
+      CATEGORIES_BY_TRACK[track]?.forEach(cat => cats.add(cat));
     });
     return Array.from(cats);
-  }, [selectedCertifications]);
+  }, [selectedTracks]);
 
-  const toggleCertification = (cert: Certification) => {
-    setSelectedCertifications(prev => 
-      prev.includes(cert) 
-        ? prev.filter(c => c !== cert)
-        : [...prev, cert]
+  const toggleTrack = (track: Track) => {
+    setSelectedTracks(prev => 
+      prev.includes(track) 
+        ? prev.filter(t => t !== track)
+        : [...prev, track]
     );
   };
 
   const startStudy = (studyMode: 'flashcard' | 'questao', count: number = 10) => {
     const filters = {
       ...DEFAULT_FILTERS,
-      certificacoes: selectedCertifications,
+      tracks: selectedTracks,
     };
-    const available = selectedCertifications.length > 0 
+    const available = selectedTracks.length > 0 
       ? filterQuestions(filters)
       : filterQuestions(DEFAULT_FILTERS);
     const shuffled = [...available].sort(() => Math.random() - 0.5).slice(0, count);
@@ -70,9 +70,12 @@ export default function Index() {
 
   const handleAnswer = (isCorrect: boolean) => {
     if (studyQuestions[currentIndex]) {
+      const correctIdx = typeof studyQuestions[currentIndex].corretaIndex === 'number' 
+        ? studyQuestions[currentIndex].corretaIndex as number
+        : (studyQuestions[currentIndex].corretaIndex as number[])[0];
       recordAnswer({
         questionId: studyQuestions[currentIndex].id,
-        selectedIndex: isCorrect ? studyQuestions[currentIndex].corretaIndex : -1,
+        selectedIndex: isCorrect ? correctIdx : -1,
         isCorrect,
         timestamp: Date.now(),
         mode: 'study',
@@ -125,7 +128,7 @@ export default function Index() {
           <div className="flex items-center justify-between mb-6">
             <Button variant="ghost" onClick={() => setMode('dashboard')}>← Voltar</Button>
             <div className="flex items-center gap-2">
-              <Badge variant="outline">{studyQuestions[currentIndex].certificacao}</Badge>
+              <Badge variant="outline">{studyQuestions[currentIndex].track}</Badge>
               <span className="text-sm text-muted-foreground">
                 {currentIndex + 1} / {studyQuestions.length}
               </span>
@@ -152,7 +155,7 @@ export default function Index() {
           <div className="flex items-center justify-between mb-6">
             <Button variant="ghost" onClick={() => setMode('dashboard')}>← Voltar</Button>
             <div className="flex items-center gap-2">
-              <Badge variant="outline">{studyQuestions[currentIndex].certificacao}</Badge>
+              <Badge variant="outline">{studyQuestions[currentIndex].track}</Badge>
               <span className="text-sm text-muted-foreground">
                 {currentIndex + 1} / {studyQuestions.length}
               </span>
@@ -183,37 +186,37 @@ export default function Index() {
         >
           <h1 className="text-3xl md:text-4xl font-bold mb-2">Bem-vindo ao Infra Study Lab</h1>
           <p className="text-muted-foreground">
-            {selectedCertifications.length > 0 
-              ? `Estudando: ${selectedCertifications.join(', ')}`
-              : 'Selecione uma ou mais certificações para começar'}
+            {selectedTracks.length > 0 
+              ? `Estudando: ${selectedTracks.join(', ')}`
+              : 'Selecione uma trilha para começar'}
           </p>
         </motion.div>
 
-        {/* Certification Filter */}
+        {/* Track Filter */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-lg">
               <GraduationCap className="h-5 w-5" />
-              Filtrar por Certificação
+              Filtrar por Trilha
             </CardTitle>
             <CardDescription>
-              Selecione as certificações que deseja estudar
+              Selecione as trilhas que deseja estudar
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {CERTIFICATIONS.map((cert) => {
-                const isSelected = selectedCertifications.includes(cert.id);
-                const certQuestions = questions.filter(q => q.certificacao === cert.id).length;
+                const isSelected = selectedTracks.includes(cert.id);
+                const trackQuestions = questions.filter(q => q.track === cert.id).length;
                 
                 return (
                   <motion.button
                     key={cert.id}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    onClick={() => toggleCertification(cert.id)}
+                    onClick={() => toggleTrack(cert.id)}
                     className={`
-                      relative p-3 rounded-xl border-2 transition-all duration-200 text-left
+                      relative p-4 rounded-xl border-2 transition-all duration-200 text-left
                       ${isSelected 
                         ? 'border-primary bg-primary/10 shadow-md' 
                         : 'border-border hover:border-primary/50 hover:bg-muted/50'
@@ -229,21 +232,21 @@ export default function Index() {
                         <Check className="h-3 w-3 text-primary-foreground" />
                       </motion.div>
                     )}
-                    <div className="font-bold text-sm">{cert.id}</div>
-                    <div className="text-xs text-muted-foreground mt-1 line-clamp-1">
-                      {cert.nome}
+                    <div className="font-bold text-lg">{cert.id}</div>
+                    <div className="text-sm text-muted-foreground mt-1">
+                      {cert.descricao}
                     </div>
                     <Badge 
                       variant="secondary" 
-                      className="mt-2 text-xs"
+                      className="mt-3"
                     >
-                      {certQuestions} questões
+                      {trackQuestions} questões
                     </Badge>
                   </motion.button>
                 );
               })}
             </div>
-            {selectedCertifications.length > 0 && (
+            {selectedTracks.length > 0 && (
               <div className="flex items-center justify-between mt-4 pt-4 border-t">
                 <span className="text-sm text-muted-foreground">
                   {availableQuestions.length} questões disponíveis
@@ -251,7 +254,7 @@ export default function Index() {
                 <Button 
                   variant="ghost" 
                   size="sm"
-                  onClick={() => setSelectedCertifications([])}
+                  onClick={() => setSelectedTracks([])}
                 >
                   Limpar filtros
                 </Button>
@@ -323,9 +326,9 @@ export default function Index() {
               <Brain className="h-5 w-5" />
               Começar a Estudar
             </CardTitle>
-            {selectedCertifications.length > 0 && (
+            {selectedTracks.length > 0 && (
               <CardDescription>
-                Estudando {selectedCertifications.length} certificação(ões) • {availableQuestions.length} questões
+                Estudando {selectedTracks.length} trilha(s) • {availableQuestions.length} questões
               </CardDescription>
             )}
           </CardHeader>
@@ -399,9 +402,9 @@ export default function Index() {
         <Card>
           <CardHeader>
             <CardTitle>Progresso por Categoria</CardTitle>
-            {selectedCertifications.length > 0 && (
+            {selectedTracks.length > 0 && (
               <CardDescription>
-                Mostrando categorias das certificações selecionadas
+                Mostrando categorias das trilhas selecionadas
               </CardDescription>
             )}
           </CardHeader>
@@ -431,37 +434,37 @@ export default function Index() {
           </CardContent>
         </Card>
 
-        {/* Certification Progress */}
-        {selectedCertifications.length === 0 && (
+        {/* Track Progress */}
+        {selectedTracks.length === 0 && (
           <Card>
             <CardHeader>
-              <CardTitle>Progresso por Certificação</CardTitle>
+              <CardTitle>Progresso por Trilha</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {CERTIFICATIONS.map(cert => {
-                  const certProgress = progress.certificationProgress?.[cert.id] || { correct: 0, total: 0 };
-                  const certAccuracy = certProgress.total > 0 ? Math.round((certProgress.correct / certProgress.total) * 100) : 0;
-                  const certQuestions = questions.filter(q => q.certificacao === cert.id).length;
+                  const trackProgress = progress.trackProgress?.[cert.id] || { correct: 0, total: 0 };
+                  const trackAccuracy = trackProgress.total > 0 ? Math.round((trackProgress.correct / trackProgress.total) * 100) : 0;
+                  const trackQuestions = questions.filter(q => q.track === cert.id).length;
                   
                   return (
                     <div 
                       key={cert.id} 
                       className="p-4 rounded-xl border bg-card/50 cursor-pointer hover:border-primary/50 transition-colors"
-                      onClick={() => toggleCertification(cert.id)}
+                      onClick={() => toggleTrack(cert.id)}
                     >
                       <div className="flex justify-between items-start mb-2">
                         <div>
                           <span className="font-bold text-sm">{cert.id}</span>
                           <p className="text-xs text-muted-foreground mt-0.5">
-                            {cert.nome.replace('MikroTik Certified ', '')}
+                            {cert.nome}
                           </p>
                         </div>
-                        <Badge variant="outline" className="text-xs">{certQuestions}q</Badge>
+                        <Badge variant="outline" className="text-xs">{trackQuestions}q</Badge>
                       </div>
-                      <Progress value={certAccuracy} className="h-2 mb-1" />
+                      <Progress value={trackAccuracy} className="h-2 mb-1" />
                       <div className="text-xs text-muted-foreground">
-                        {certProgress.correct}/{certProgress.total} corretas ({certAccuracy}%)
+                        {trackProgress.correct}/{trackProgress.total} corretas ({trackAccuracy}%)
                       </div>
                     </div>
                   );

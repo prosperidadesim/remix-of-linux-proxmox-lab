@@ -18,7 +18,7 @@ import {
   LineChart
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { CATEGORIES, CERTIFICATIONS, Certification } from '@/types/question';
+import { CATEGORIES, CERTIFICATIONS, Track } from '@/types/question';
 import { cn } from '@/lib/utils';
 import {
   ResponsiveContainer,
@@ -42,7 +42,7 @@ const COLORS = ['hsl(var(--success))', 'hsl(var(--destructive))', 'hsl(var(--war
 
 export default function Estatisticas() {
   const { questions, progress, answers, exams } = useStudyStore();
-  const [selectedCert, setSelectedCert] = useState<Certification | null>(null);
+  const [selectedCert, setSelectedCert] = useState<Track | null>(null);
 
   const stats = useMemo(() => {
     const accuracy = progress.totalAnswered > 0 
@@ -110,9 +110,9 @@ export default function Estatisticas() {
 
     const activityData = Object.values(dailyActivity);
 
-    // Certification stats
+    // Track stats (renamed from certification)
     const certificationData = CERTIFICATIONS.map(cert => {
-      const certQuestions = questions.filter(q => q.certificacao === cert.id);
+      const certQuestions = questions.filter(q => q.track === cert.id);
       const certProgress = progress.certificationProgress?.[cert.id] || { correct: 0, total: 0 };
       const certAnswered = certQuestions.filter(q => progress.questionsAnswered.includes(q.id)).length;
       const pct = certProgress.total > 0 ? Math.round((certProgress.correct / certProgress.total) * 100) : 0;
@@ -171,10 +171,10 @@ export default function Estatisticas() {
     if (!selectedCert) return null;
 
     const certInfo = CERTIFICATIONS.find(c => c.id === selectedCert);
-    const certQuestions = questions.filter(q => q.certificacao === selectedCert);
+    const certQuestions = questions.filter(q => q.track === selectedCert);
     const certAnswers = answers.filter(a => {
       const q = questions.find(q => q.id === a.questionId);
-      return q?.certificacao === selectedCert;
+      return q?.track === selectedCert;
     });
 
     // Categories for this certification

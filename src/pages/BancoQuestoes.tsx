@@ -106,20 +106,23 @@ export default function BancoQuestoes() {
           } else {
             validQuestions.push({
               id: q.id,
-              certificacao: q.certificacao || 'MTCNA',
+              track: q.track || 'Linux Essentials',
+              domain: q.domain || '1',
+              domainName: q.domainName || '',
+              objective: q.objective || '1.1',
+              objectiveTitle: q.objectiveTitle || '',
               categoria: q.categoria || 'Misc',
               dificuldade: q.dificuldade || 'Medium',
               pergunta: q.pergunta,
+              tipo: q.tipo || 'single',
               opcoes: q.opcoes,
               corretaIndex: q.corretaIndex,
               explicacaoCorreta: q.explicacaoCorreta,
               explicacoesPorOpcao: q.explicacoesPorOpcao || q.opcoes.map(() => ''),
               linksOficiais: q.linksOficiais,
               tags: q.tags || [],
-              rosVersion: q.rosVersion || 'ambos',
               comandoRelacionado: q.comandoRelacionado,
-              pythonAPI: q.pythonAPI,
-            });
+            } as Question);
           }
         });
 
@@ -270,7 +273,7 @@ export default function BancoQuestoes() {
                             {question.dificuldade === 'Easy' ? 'Fácil' :
                              question.dificuldade === 'Medium' ? 'Médio' : 'Difícil'}
                           </Badge>
-                          <Badge variant="outline">{question.rosVersion}</Badge>
+                          <Badge variant="outline">{question.track}</Badge>
                         </div>
                         <p className="font-medium line-clamp-2">{question.pergunta}</p>
                         <div className="flex gap-1 flex-wrap">
