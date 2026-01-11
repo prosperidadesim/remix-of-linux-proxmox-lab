@@ -53,7 +53,7 @@ export function Flashcard({ question, onAnswer, onNext }: FlashcardProps) {
           <div className="flex flex-wrap gap-2 mb-6">
             <Badge variant="secondary">{question.categoria}</Badge>
             <Badge className={difficultyClass}>{question.dificuldade}</Badge>
-            <Badge variant="outline">{question.rosVersion}</Badge>
+            <Badge variant="outline">{question.track}</Badge>
           </div>
           
           <h2 className="text-xl font-semibold mb-6 leading-relaxed">{question.pergunta}</h2>
@@ -76,7 +76,7 @@ export function Flashcard({ question, onAnswer, onNext }: FlashcardProps) {
           style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
         >
           <h3 className="text-lg font-semibold text-success mb-4">Resposta Correta:</h3>
-          <p className="text-lg mb-4">{question.opcoes[question.corretaIndex]}</p>
+          <p className="text-lg mb-4">{question.opcoes[typeof question.corretaIndex === 'number' ? question.corretaIndex : question.corretaIndex[0]]}</p>
           
           <div className="bg-muted/50 rounded-lg p-4 mb-4">
             <h4 className="font-medium mb-2">Explicação:</h4>

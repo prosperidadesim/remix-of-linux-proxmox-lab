@@ -1,14 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Question, StudyProgress, UserAnswer, ExamResult, QuestionFilters, Certification } from '@/types/question';
+import { Question, StudyProgress, UserAnswer, ExamResult, QuestionFilters, Track } from '@/types/question';
 import { initialQuestionBank } from '@/data/questionBank';
 import { useAuth } from '@/contexts/AuthContext';
 
 const STORAGE_KEYS = {
-  questions: 'mikrotik-questions',
-  progress: 'mikrotik-progress',
-  answers: 'mikrotik-answers',
-  exams: 'mikrotik-exams',
-  lastServerSync: 'mikrotik-last-server-sync',
+  questions: 'infra-study-questions',
+  progress: 'infra-study-progress',
+  answers: 'infra-study-answers',
+  exams: 'infra-study-exams',
+  lastServerSync: 'infra-study-last-server-sync',
 };
 
 const defaultProgress: StudyProgress = {
@@ -19,8 +19,12 @@ const defaultProgress: StudyProgress = {
   markedForReview: [],
   lastStudyDate: Date.now(),
   streak: 0,
+  xp: 0,
+  level: 1,
   categoryProgress: {},
-  certificationProgress: {} as Record<Certification, { correct: number; total: number }>,
+  trackProgress: {} as Record<Track, { correct: number; total: number }>,
+  domainProgress: {},
+  certificationProgress: {} as Record<Track, { correct: number; total: number }>,
 };
 
 // Helper to check if server is available
@@ -93,7 +97,7 @@ export function useStudyStore() {
       
       // Carrega dados locais primeiro (para exibição imediata)
       const storedProgress = localStorage.getItem(STORAGE_KEYS.progress);
-      if (storedProgress) setProgress(JSON.parse(storedProgress));
+      if (storedProgress) setProgress({ ...defaultProgress, ...JSON.parse(storedProgress) });
       
       const storedAnswers = localStorage.getItem(STORAGE_KEYS.answers);
       if (storedAnswers) setAnswers(JSON.parse(storedAnswers));
@@ -116,7 +120,7 @@ export function useStudyStore() {
             
             if (progressRes) {
               const serverProgress = await progressRes.json();
-              setProgress(serverProgress);
+              setProgress({ ...defaultProgress, ...serverProgress });
               localStorage.setItem(STORAGE_KEYS.progress, JSON.stringify(serverProgress));
             }
             
@@ -198,8 +202,15 @@ export function useStudyStore() {
     if (question) {
       const newProgress = { ...progress };
       newProgress.totalAnswered++;
-      if (answer.isCorrect) newProgress.totalCorrect++;
-      else newProgress.totalIncorrect++;
+      
+      const isCorrect = typeof answer.isCorrect === 'boolean' ? answer.isCorrect : false;
+      if (isCorrect) {
+        newProgress.totalCorrect++;
+        newProgress.xp = (newProgress.xp || 0) + 10; // XP for correct answer
+      } else {
+        newProgress.totalIncorrect++;
+      }
+      
       if (!newProgress.questionsAnswered.includes(answer.questionId)) {
         newProgress.questionsAnswered.push(answer.questionId);
       }
@@ -210,17 +221,34 @@ export function useStudyStore() {
         newProgress.categoryProgress[question.categoria] = { correct: 0, total: 0 };
       }
       newProgress.categoryProgress[question.categoria].total++;
-      if (answer.isCorrect) newProgress.categoryProgress[question.categoria].correct++;
+      if (isCorrect) newProgress.categoryProgress[question.categoria].correct++;
       
-      // Certification progress
+      // Track progress (new field)
+      if (!newProgress.trackProgress) {
+        newProgress.trackProgress = {} as Record<Track, { correct: number; total: number }>;
+      }
+      if (!newProgress.trackProgress[question.track]) {
+        newProgress.trackProgress[question.track] = { correct: 0, total: 0 };
+      }
+      newProgress.trackProgress[question.track].total++;
+      if (isCorrect) newProgress.trackProgress[question.track].correct++;
+      
+      // Domain progress
+      if (!newProgress.domainProgress) {
+        newProgress.domainProgress = {};
+      }
+      const domainKey = `${question.track}-${question.domain}`;
+      if (!newProgress.domainProgress[domainKey]) {
+        newProgress.domainProgress[domainKey] = { correct: 0, total: 0 };
+      }
+      newProgress.domainProgress[domainKey].total++;
+      if (isCorrect) newProgress.domainProgress[domainKey].correct++;
+      
+      // Legacy certification progress (alias to track)
       if (!newProgress.certificationProgress) {
-        newProgress.certificationProgress = {} as Record<Certification, { correct: number; total: number }>;
+        newProgress.certificationProgress = {} as Record<Track, { correct: number; total: number }>;
       }
-      if (!newProgress.certificationProgress[question.certificacao]) {
-        newProgress.certificationProgress[question.certificacao] = { correct: 0, total: 0 };
-      }
-      newProgress.certificationProgress[question.certificacao].total++;
-      if (answer.isCorrect) newProgress.certificationProgress[question.certificacao].correct++;
+      newProgress.certificationProgress = newProgress.trackProgress;
       
       saveProgress(newProgress);
     }
@@ -236,16 +264,18 @@ export function useStudyStore() {
 
   const filterQuestions = useCallback((filters: QuestionFilters): Question[] => {
     return questions.filter(q => {
-      if (filters.certificacoes.length && !filters.certificacoes.includes(q.certificacao)) return false;
-      if (filters.categorias.length && !filters.categorias.includes(q.categoria)) return false;
-      if (filters.dificuldades.length && !filters.dificuldades.includes(q.dificuldade)) return false;
-      if (filters.rosVersion !== 'todos' && q.rosVersion !== 'ambos' && q.rosVersion !== filters.rosVersion) return false;
+      // Filter by tracks (new) or certificacoes (legacy)
+      const trackFilters = filters.tracks?.length ? filters.tracks : (filters.certificacoes || []);
+      if (trackFilters.length && !trackFilters.includes(q.track)) return false;
+      
+      if (filters.categorias?.length && !filters.categorias.includes(q.categoria)) return false;
+      if (filters.dificuldades?.length && !filters.dificuldades.includes(q.dificuldade)) return false;
+      if (filters.domains?.length && !filters.domains.includes(q.domain)) return false;
       if (filters.apenasNaoRespondidas && progress.questionsAnswered.includes(q.id)) return false;
       if (filters.apenasErradas) {
         const lastAnswer = [...answers].reverse().find(a => a.questionId === q.id);
         if (!lastAnswer || lastAnswer.isCorrect) return false;
       }
-      if (filters.apenasComPythonAPI && !q.pythonAPI) return false;
       return true;
     });
   }, [questions, answers, progress]);
