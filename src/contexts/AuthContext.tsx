@@ -26,9 +26,10 @@ const getApiUrl = () => {
   const saved = localStorage.getItem('mikrotik-api-url');
   if (saved) return saved;
   
-  // Em desenvolvimento, usa localhost:3001
-  // Em produção, assume que a API está no mesmo servidor (via nginx proxy)
-  if (window.location.hostname === 'localhost') {
+  // Em desenvolvimento (Lovable preview ou localhost), usa a URL do preview com /api
+  // O backend deve estar rodando localmente na porta 3001
+  if (window.location.hostname === 'localhost' || window.location.hostname.includes('lovableproject.com')) {
+    // Por padrão, tenta conectar ao backend local
     return 'http://localhost:3001';
   }
   return window.location.origin;
@@ -52,20 +53,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const validateToken = async (authToken: string) => {
     try {
+      console.log('Validando token em:', `${apiUrl}/api/auth/me`);
       const response = await fetch(`${apiUrl}/api/auth/me`, {
         headers: { Authorization: `Bearer ${authToken}` },
       });
       
       if (response.ok) {
         const userData = await response.json();
+        console.log('Usuário validado:', userData);
         setUser(userData);
       } else {
+        console.log('Token inválido, removendo...');
         localStorage.removeItem('mikrotik-token');
         setToken(null);
       }
     } catch (error) {
-      console.error('Erro ao validar token:', error);
-      // Não remove o token em caso de erro de rede (servidor pode estar offline)
+      console.error('Erro ao validar token (backend offline?):', error);
+      // Em caso de erro de rede, tenta usar os dados salvos do usuário
+      // para permitir navegação enquanto o backend está offline
+      const savedUser = localStorage.getItem('mikrotik-user');
+      if (savedUser) {
+        try {
+          setUser(JSON.parse(savedUser));
+        } catch (e) {
+          // Ignora erro de parse
+        }
+      }
     } finally {
       setIsLoading(false);
     }
@@ -87,12 +100,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(data.token);
     setUser(data.user);
     localStorage.setItem('mikrotik-token', data.token);
+    localStorage.setItem('mikrotik-user', JSON.stringify(data.user));
   };
 
   const logout = () => {
     setToken(null);
     setUser(null);
     localStorage.removeItem('mikrotik-token');
+    localStorage.removeItem('mikrotik-user');
   };
 
   return (
