@@ -8,6 +8,7 @@ const STORAGE_KEYS = {
   progress: 'mikrotik-progress',
   answers: 'mikrotik-answers',
   exams: 'mikrotik-exams',
+  lastServerSync: 'mikrotik-last-server-sync',
 };
 
 const defaultProgress: StudyProgress = {
@@ -22,6 +23,19 @@ const defaultProgress: StudyProgress = {
   certificationProgress: {} as Record<Certification, { correct: number; total: number }>,
 };
 
+// Helper to check if server is available
+async function isServerAvailable(apiUrl: string): Promise<boolean> {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    const response = await fetch(`${apiUrl}/api/health`, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
 export function useStudyStore() {
   const { token, apiUrl, isAuthenticated } = useAuth();
   
@@ -32,8 +46,9 @@ export function useStudyStore() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [isOfflineMode, setIsOfflineMode] = useState(false);
 
-  // Helper para fazer requests à API
+  // Helper para fazer requests à API com fallback offline
   const fetchApi = useCallback(async (endpoint: string, options: RequestInit = {}) => {
     if (!token || !apiUrl) return null;
     
@@ -51,21 +66,23 @@ export function useStudyStore() {
         throw new Error(`API Error: ${response.status}`);
       }
       
+      setIsOfflineMode(false);
       return response;
     } catch (error) {
-      console.error('API request failed:', error);
-      setSyncError('Erro ao sincronizar com o servidor');
+      console.warn('API request failed, using offline mode:', error);
+      setIsOfflineMode(true);
+      setSyncError('Modo offline - usando dados locais');
       return null;
     }
   }, [token, apiUrl]);
 
-  // Carrega dados do backend ou localStorage
+  // Carrega dados do backend ou localStorage (com fallback offline)
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
       setSyncError(null);
       
-      // Sempre carrega questões do localStorage/padrão
+      // Sempre carrega questões do localStorage/padrão primeiro (para resposta imediata)
       const storedQuestions = localStorage.getItem(STORAGE_KEYS.questions);
       if (storedQuestions) {
         setQuestions(JSON.parse(storedQuestions));
@@ -74,51 +91,60 @@ export function useStudyStore() {
         localStorage.setItem(STORAGE_KEYS.questions, JSON.stringify(initialQuestionBank));
       }
       
-      // Se autenticado, busca do backend
-      if (isAuthenticated && token) {
-        try {
-          const [progressRes, answersRes] = await Promise.all([
-            fetchApi('/api/progress'),
-            fetchApi('/api/answers'),
-          ]);
-          
-          if (progressRes) {
-            const serverProgress = await progressRes.json();
-            setProgress(serverProgress);
-            localStorage.setItem(STORAGE_KEYS.progress, JSON.stringify(serverProgress));
-          }
-          
-          if (answersRes) {
-            const serverAnswers = await answersRes.json();
-            setAnswers(serverAnswers);
-            localStorage.setItem(STORAGE_KEYS.answers, JSON.stringify(serverAnswers));
-          }
-        } catch (error) {
-          console.error('Failed to load from server, using local data');
-          // Fallback para localStorage
-          const storedProgress = localStorage.getItem(STORAGE_KEYS.progress);
-          if (storedProgress) setProgress(JSON.parse(storedProgress));
-          
-          const storedAnswers = localStorage.getItem(STORAGE_KEYS.answers);
-          if (storedAnswers) setAnswers(JSON.parse(storedAnswers));
-        }
-      } else {
-        // Não autenticado, usa localStorage
-        const storedProgress = localStorage.getItem(STORAGE_KEYS.progress);
-        if (storedProgress) setProgress(JSON.parse(storedProgress));
-        
-        const storedAnswers = localStorage.getItem(STORAGE_KEYS.answers);
-        if (storedAnswers) setAnswers(JSON.parse(storedAnswers));
-      }
+      // Carrega dados locais primeiro (para exibição imediata)
+      const storedProgress = localStorage.getItem(STORAGE_KEYS.progress);
+      if (storedProgress) setProgress(JSON.parse(storedProgress));
+      
+      const storedAnswers = localStorage.getItem(STORAGE_KEYS.answers);
+      if (storedAnswers) setAnswers(JSON.parse(storedAnswers));
       
       const storedExams = localStorage.getItem(STORAGE_KEYS.exams);
       if (storedExams) setExams(JSON.parse(storedExams));
+      
+      // Se autenticado, tenta buscar do backend (em background)
+      if (isAuthenticated && token) {
+        // Verifica se o servidor está disponível
+        const serverAvailable = await isServerAvailable(apiUrl);
+        
+        if (serverAvailable) {
+          setIsOfflineMode(false);
+          try {
+            const [progressRes, answersRes] = await Promise.all([
+              fetchApi('/api/progress'),
+              fetchApi('/api/answers'),
+            ]);
+            
+            if (progressRes) {
+              const serverProgress = await progressRes.json();
+              setProgress(serverProgress);
+              localStorage.setItem(STORAGE_KEYS.progress, JSON.stringify(serverProgress));
+            }
+            
+            if (answersRes) {
+              const serverAnswers = await answersRes.json();
+              setAnswers(serverAnswers);
+              localStorage.setItem(STORAGE_KEYS.answers, JSON.stringify(serverAnswers));
+            }
+            
+            // Salva timestamp da última sincronização
+            localStorage.setItem(STORAGE_KEYS.lastServerSync, Date.now().toString());
+          } catch (error) {
+            console.warn('Failed to load from server, using cached data');
+            setIsOfflineMode(true);
+            setSyncError('Usando dados em cache');
+          }
+        } else {
+          setIsOfflineMode(true);
+          setSyncError('Servidor indisponível - usando cache local');
+          console.log('Server unavailable, using cached data');
+        }
+      }
       
       setIsLoading(false);
     };
     
     loadData();
-  }, [isAuthenticated, token, fetchApi]);
+  }, [isAuthenticated, token, apiUrl, fetchApi]);
 
   // Sincroniza progresso com o backend
   const syncProgress = useCallback(async (newProgress: StudyProgress) => {
@@ -257,6 +283,7 @@ export function useStudyStore() {
     isLoading,
     isSyncing,
     syncError,
+    isOfflineMode,
     recordAnswer,
     toggleMarkForReview,
     filterQuestions,
