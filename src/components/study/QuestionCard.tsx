@@ -3,7 +3,7 @@ import { Question } from '@/types/question';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { Check, X, ArrowRight, ExternalLink, Terminal } from 'lucide-react';
+import { Check, X, ArrowRight, ExternalLink, Terminal, PlayCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface QuestionCardProps {
@@ -122,7 +122,7 @@ export function QuestionCard({ question, onAnswer, onNext, showFeedback = true }
                 <p className="text-sm text-muted-foreground mb-3">
                   {question.explicacoesPorOpcao[selectedIndex!]}
                 </p>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 mb-2">
                   {question.linksOficiais.map((link, i) => (
                     <a
                       key={i}
@@ -136,6 +136,17 @@ export function QuestionCard({ question, onAnswer, onNext, showFeedback = true }
                     </a>
                   ))}
                 </div>
+                {question.videoExplicativo && (
+                  <a
+                    href={question.videoExplicativo.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-3 py-2 mt-2 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500/20 transition-colors text-sm font-medium"
+                  >
+                    <PlayCircle className="h-4 w-4" />
+                    {question.videoExplicativo.titulo}
+                  </a>
+                )}
               </div>
             </motion.div>
           )}

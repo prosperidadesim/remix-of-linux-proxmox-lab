@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Question } from '@/types/question';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ExternalLink, Check, X, RotateCcw, Terminal } from 'lucide-react';
+import { ExternalLink, Check, X, RotateCcw, Terminal, PlayCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface FlashcardProps {
@@ -83,7 +83,7 @@ export function Flashcard({ question, onAnswer, onNext }: FlashcardProps) {
             <p className="text-muted-foreground text-sm">{question.explicacaoCorreta}</p>
           </div>
 
-          <div className="space-y-2 mb-6">
+          <div className="space-y-2 mb-4">
             <h4 className="font-medium text-sm">Links Oficiais:</h4>
             {question.linksOficiais.map((link, i) => (
               <a
@@ -99,6 +99,19 @@ export function Flashcard({ question, onAnswer, onNext }: FlashcardProps) {
               </a>
             ))}
           </div>
+
+          {question.videoExplicativo && (
+            <a
+              href={question.videoExplicativo.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-3 py-2 mb-4 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-500/20 transition-colors text-sm font-medium w-fit"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <PlayCircle className="h-4 w-4" />
+              {question.videoExplicativo.titulo}
+            </a>
+          )}
 
           {!answered ? (
             <div className="flex gap-3 justify-center">

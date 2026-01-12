@@ -11,42 +11,52 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Copy, Check, Play, Terminal, Code2, BookOpen, ExternalLink, ChevronRight } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
-// Categorias dos exemplos
+// Categorias dos exemplos - Proxmox VE
 const CATEGORIES = {
   basico: {
     label: 'Básico',
     icon: BookOpen,
-    examples: ['conexao', 'system_resource', 'log_read', 'script_run', 'system_backup'],
+    examples: ['conexao', 'nodes_list', 'system_resource', 'dns_config', 'time_config'],
+  },
+  vms: {
+    label: 'VMs (QEMU)',
+    icon: Terminal,
+    examples: ['vm_list', 'vm_create', 'vm_start_stop', 'vm_snapshot', 'vm_clone', 'vm_cloudinit'],
+  },
+  containers: {
+    label: 'Containers (LXC)',
+    icon: Code2,
+    examples: ['ct_list', 'ct_create'],
   },
   rede: {
     label: 'Rede & IP',
     icon: Terminal,
-    examples: ['interfaces_list', 'ip_addresses', 'vlan_list', 'dhcp_leases', 'dhcp_add_static'],
+    examples: ['network_config', 'network_vlan', 'network_bond', 'sdn_zones', 'firewall_rules'],
   },
-  firewall: {
-    label: 'Firewall & Security',
-    icon: Code2,
-    examples: ['firewall_rules', 'firewall_add_rule', 'ipsec_peers'],
-  },
-  routing: {
-    label: 'Roteamento',
+  storage: {
+    label: 'Storage',
     icon: ChevronRight,
-    examples: ['routes_list', 'routes_add', 'ospf_neighbors', 'ospf_networks', 'bgp_peers'],
+    examples: ['storage_list', 'storage_upload_iso', 'ceph_status'],
   },
-  wireless: {
-    label: 'Wireless',
+  backup: {
+    label: 'Backup & Restore',
+    icon: Code2,
+    examples: ['backup_create', 'backup_restore', 'vzdump_advanced', 'replication'],
+  },
+  cluster: {
+    label: 'Cluster & HA',
     icon: Terminal,
-    examples: ['wireless_clients', 'capsman_caps'],
+    examples: ['cluster_status', 'ha_resources', 'migration', 'tasks_list'],
   },
   services: {
     label: 'Serviços',
     icon: Code2,
-    examples: ['queue_simple', 'hotspot_users', 'hotspot_active', 'usermanager_users'],
+    examples: ['services_list', 'metrics', 'log_viewer', 'console_access'],
   },
   avancado: {
     label: 'Avançado',
     icon: Terminal,
-    examples: ['mpls_ldp', 'ipv6_address'],
+    examples: ['acl_permissions', 'api_tokens', 'template_management', 'pci_passthrough', 'bulk_operations'],
   },
 };
 
