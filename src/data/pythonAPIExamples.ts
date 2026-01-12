@@ -1191,13 +1191,13 @@ print(f"  Port: {spice['tls-port']}")
 print(f"  Password: {spice['password']}")
 
 # Gerar arquivo .vv para SPICE
-spice_file = f\"\"\"[virt-viewer]
+spice_file = f'''[virt-viewer]
 type=spice
 host={spice['host']}
 port={spice['port']}
 tls-port={spice['tls-port']}
 password={spice['password']}
-\"\"\"
+'''
 print("\\nArquivo .vv gerado!")
 
 # Console do nó (shell)
