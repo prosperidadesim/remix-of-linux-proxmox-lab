@@ -25,6 +25,11 @@ export const linuxEssentialsQuestions: Question[] = [
       'BSD é uma família diferente de sistemas operacionais derivados do Unix.',
     ],
     linksOficiais: [{ titulo: 'História do Linux', url: 'https://www.kernel.org/' }],
+    videoExplicativo: {
+      titulo: 'O que é o Kernel Linux?',
+      url: 'https://www.youtube.com/watch?v=rrB13utjYV4',
+      plataforma: 'youtube',
+    },
     tags: ['kernel', 'história', 'básico'],
   },
   {

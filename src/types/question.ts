@@ -86,6 +86,12 @@ export interface OfficialLink {
   url: string;
 }
 
+export interface VideoExplicativo {
+  titulo: string;
+  url: string;
+  plataforma: 'youtube' | 'vimeo' | 'outro';
+}
+
 export interface Question {
   id: string;
   track: Track;
@@ -102,6 +108,7 @@ export interface Question {
   explicacaoCorreta: string;
   explicacoesPorOpcao: string[];
   linksOficiais: OfficialLink[];
+  videoExplicativo?: VideoExplicativo;  // Vídeo opcional explicando a questão
   tags: string[];
   comandoRelacionado?: string;
 }
