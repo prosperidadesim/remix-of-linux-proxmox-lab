@@ -20,6 +20,10 @@ import ResetPassword from "./pages/ResetPassword";
 import AdminDashboard from "./pages/AdminDashboard";
 import Ajuda from "./pages/Ajuda";
 import NotFound from "./pages/NotFound";
+import Biblioteca from "./pages/Biblioteca";
+import Conteudo from "./pages/Conteudo";
+import TerminalLab from "./pages/TerminalLab";
+import Pesquisa from "./pages/Pesquisa";
 import { Loader2 } from "lucide-react";
 
 const queryClient = new QueryClient();
@@ -81,6 +85,10 @@ function AppContent() {
         <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
         <Route path="/scripts" element={<ProtectedRoute><Scripts /></ProtectedRoute>} />
         <Route path="/ajuda" element={<ProtectedRoute><Ajuda /></ProtectedRoute>} />
+        <Route path="/biblioteca" element={<ProtectedRoute><Biblioteca /></ProtectedRoute>} />
+        <Route path="/conteudo/:id" element={<ProtectedRoute><Conteudo /></ProtectedRoute>} />
+        <Route path="/terminal" element={<ProtectedRoute><TerminalLab /></ProtectedRoute>} />
+        <Route path="/pesquisa" element={<ProtectedRoute><Pesquisa /></ProtectedRoute>} />
         <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
