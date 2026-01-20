@@ -32,6 +32,12 @@ import {
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import {
+  loadContentsFromStorage,
+  loadProgressFromStorage,
+  Content as MockContent,
+  ContentProgress,
+} from '@/data/mockContents';
 
 interface Content {
   id: number;
@@ -69,6 +75,7 @@ export default function Biblioteca() {
   const [contents, setContents] = useState<Content[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isOfflineMode, setIsOfflineMode] = useState(false);
   
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTrack, setSelectedTrack] = useState<string>('all');
@@ -91,8 +98,35 @@ export default function Biblioteca() {
       
       const data = await res.json();
       setContents(data);
+      setIsOfflineMode(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao carregar biblioteca');
+      // Fallback to mock data when backend is offline
+      console.log('Backend offline, using mock data');
+      const mockContents = loadContentsFromStorage();
+      const mockProgress = loadProgressFromStorage();
+      
+      // Only show published contents and merge with progress
+      const publishedContents: Content[] = mockContents
+        .filter(c => c.status === 'publicado')
+        .map(c => ({
+          id: c.id,
+          title: c.title,
+          description: c.description,
+          type: c.type,
+          track: c.track,
+          tags: c.tags,
+          level: c.level,
+          featured: c.featured,
+          duration: c.duration,
+          fileSize: c.fileSize,
+          progress: mockProgress[c.id] ? {
+            status: mockProgress[c.id].status,
+            lastPosition: mockProgress[c.id].lastPosition,
+          } : undefined,
+        }));
+      
+      setContents(publishedContents);
+      setIsOfflineMode(true);
     } finally {
       setIsLoading(false);
     }
@@ -242,6 +276,21 @@ export default function Biblioteca() {
   return (
     <Layout>
       <div className="p-6 max-w-7xl mx-auto space-y-6">
+        {/* Offline mode banner */}
+        {isOfflineMode && (
+          <Card className="border-warning/50 bg-warning/5 p-4">
+            <div className="flex items-center gap-3">
+              <AlertCircle className="h-5 w-5 text-warning flex-shrink-0" />
+              <div className="text-sm">
+                <p className="font-medium text-warning">Modo Offline</p>
+                <p className="text-muted-foreground">
+                  Backend não disponível. Exibindo conteúdos de demonstração armazenados localmente.
+                </p>
+              </div>
+            </div>
+          </Card>
+        )}
+        
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>

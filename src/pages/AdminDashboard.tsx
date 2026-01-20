@@ -55,6 +55,8 @@ import {
   Download,
   FileSpreadsheet,
   FileText,
+  BookOpen,
+  Video,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
@@ -70,6 +72,7 @@ import {
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import ContentManager from '@/components/admin/ContentManager';
 
 interface UserStats {
   id: number;
@@ -782,10 +785,14 @@ export default function AdminDashboard() {
         )}
 
         <Tabs defaultValue="users" className="w-full">
-          <TabsList>
+          <TabsList className="flex-wrap h-auto">
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               Usuários
+            </TabsTrigger>
+            <TabsTrigger value="contents" className="flex items-center gap-2">
+              <BookOpen className="h-4 w-4" />
+              Conteúdos
             </TabsTrigger>
             <TabsTrigger value="ranking" className="flex items-center gap-2">
               <Trophy className="h-4 w-4" />
@@ -796,6 +803,10 @@ export default function AdminDashboard() {
               Atividade
             </TabsTrigger>
           </TabsList>
+          
+          <TabsContent value="contents" className="mt-6">
+            <ContentManager />
+          </TabsContent>
 
           <TabsContent value="users" className="mt-6">
             <Card>
