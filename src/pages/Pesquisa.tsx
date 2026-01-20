@@ -72,7 +72,7 @@ export default function Pesquisa() {
       });
       
       if (!res.ok) {
-        const errData = await res.json();
+        const errData = await res.json().catch(() => ({}));
         throw new Error(errData.error || 'Erro ao pesquisar');
       }
       
@@ -85,10 +85,13 @@ export default function Pesquisa() {
       setRecentSearches(updated);
       localStorage.setItem('recentSearches', JSON.stringify(updated));
     } catch (err) {
-      if (err instanceof Error && err.message.includes('não configurado')) {
+      // Check if it's a network error (backend offline)
+      if (err instanceof TypeError && err.message.includes('fetch')) {
+        setError('Backend não disponível. Configure e inicie o servidor local para usar a pesquisa online.');
+      } else if (err instanceof Error && err.message.includes('não configurado')) {
         setError('Pesquisa não configurada. Configure SEARXNG_URL ou SERPER_API_KEY no backend.');
       } else {
-        setError(err instanceof Error ? err.message : 'Erro ao realizar pesquisa');
+        setError('Pesquisa não disponível. Verifique se o backend está rodando e se SEARXNG_URL ou SERPER_API_KEY está configurado.');
       }
     } finally {
       setIsLoading(false);
