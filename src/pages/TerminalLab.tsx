@@ -20,12 +20,14 @@ import {
 import { motion } from 'framer-motion';
 
 export default function TerminalLab() {
-  const { apiUrl } = useAuth();
+  const { apiUrl, token } = useAuth();
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
 
-  // Convert HTTP URL to WebSocket URL
-  const wsUrl = apiUrl?.replace(/^http/, 'ws').replace(/\/$/, '') + '/api/terminal';
+  // Convert HTTP URL to WebSocket URL and add token for authentication
+  const wsUrl = apiUrl ? 
+    `${apiUrl.replace(/^http/, 'ws').replace(/\/$/, '')}/api/terminal?token=${token}` : 
+    undefined;
 
   const handleSessionStart = (id: string) => {
     setSessionId(id);

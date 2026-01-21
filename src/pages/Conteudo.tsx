@@ -33,16 +33,16 @@ interface ContentDetail {
   tags: string[];
   level: 'iniciante' | 'intermediario' | 'avancado';
   featured: boolean;
-  filePath: string;
-  fileSize: number;
+  file_path: string;
+  file_size: number;
   duration?: number;
-  createdAt: string;
+  pages?: number;
+  created_at: string;
 }
 
 interface ContentProgress {
-  status: 'em_andamento' | 'concluido';
-  lastPosition: number;
-  progressData: Record<string, unknown>;
+  status: 'nao_iniciado' | 'em_andamento' | 'concluido';
+  last_position: number;
 }
 
 const levelLabels: Record<string, string> = {
@@ -86,10 +86,12 @@ export default function Conteudo() {
       
       if (!contentRes.ok) throw new Error('Conteúdo não encontrado');
       
-      setContent(await contentRes.json());
+      const contentData = await contentRes.json();
+      setContent(contentData);
       
       if (progressRes.ok) {
-        setProgress(await progressRes.json());
+        const progressData = await progressRes.json();
+        setProgress(progressData);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar conteúdo');
@@ -106,14 +108,16 @@ export default function Conteudo() {
       const res = await fetchApi(`/api/contents/${id}/progress`, {
         method: 'PUT',
         body: JSON.stringify({
-          lastPosition: position,
+          last_position: position,
           status: completed ? 'concluido' : 'em_andamento',
         }),
       });
       
       if (res.ok) {
-        const updatedProgress = await res.json();
-        setProgress(updatedProgress);
+        setProgress({
+          status: completed ? 'concluido' : 'em_andamento',
+          last_position: position
+        });
       }
     } catch (err) {
       console.error('Erro ao salvar progresso:', err);
@@ -145,8 +149,8 @@ export default function Conteudo() {
   };
 
   const getFileUrl = () => {
-    if (!content?.filePath) return '';
-    return `${apiUrl}/api/files/${content.type}/${content.filePath}`;
+    if (!content?.file_path) return '';
+    return `${apiUrl}/api/files/${content.file_path}`;
   };
 
   const formatDuration = (seconds?: number) => {
@@ -233,8 +237,8 @@ export default function Conteudo() {
                       {formatDuration(content.duration)}
                     </span>
                   )}
-                  {content.fileSize && (
-                    <span>{formatFileSize(content.fileSize)}</span>
+                  {content.file_size && (
+                    <span>{formatFileSize(content.file_size)}</span>
                   )}
                 </div>
               </div>
@@ -248,10 +252,10 @@ export default function Conteudo() {
                 <CheckCircle className="h-4 w-4 mr-1" />
                 Concluído
               </Badge>
-            ) : progress ? (
+            ) : progress && progress.status !== 'nao_iniciado' ? (
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">Em andamento</span>
-                <Progress value={progress.lastPosition} className="w-24 h-2" />
+                <Progress value={progress.last_position} className="w-24 h-2" />
               </div>
             ) : null}
             
@@ -295,7 +299,7 @@ export default function Conteudo() {
             <PDFViewer
               url={getFileUrl()}
               title={content.title}
-              currentPage={progress?.lastPosition || 1}
+              currentPage={progress?.last_position || 1}
               onPageChange={handlePDFPageChange}
               className="h-[70vh]"
             />
@@ -303,7 +307,7 @@ export default function Conteudo() {
             <VideoPlayer
               url={getFileUrl()}
               title={content.title}
-              currentTime={progress?.lastPosition || 0}
+              currentTime={progress?.last_position || 0}
               onTimeUpdate={handleVideoTimeUpdate}
               onComplete={handleVideoComplete}
               className="aspect-video"
