@@ -66,19 +66,16 @@ export default function Pesquisa() {
     setSearchInfo(null);
     
     try {
-      const res = await fetchApi('/api/search', {
-        method: 'POST',
-        body: JSON.stringify({ query: searchQuery }),
-      });
+      const res = await fetchApi(`/api/search?q=${encodeURIComponent(searchQuery)}`);
       
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || 'Erro ao pesquisar');
+        throw new Error(errData.error || errData.message || 'Erro ao pesquisar');
       }
       
-      const data: SearchResponse = await res.json();
-      setResults(data.results);
-      setSearchInfo({ cached: data.cached, provider: data.provider });
+      const data = await res.json();
+      setResults(data.results || []);
+      setSearchInfo({ cached: false, provider: data.provider || 'unknown' });
       
       // Save to recent searches
       const updated = [searchQuery, ...recentSearches.filter(s => s !== searchQuery)].slice(0, 5);
